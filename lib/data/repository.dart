@@ -1,5 +1,6 @@
 import 'models.dart';
 import '../core/config.dart';
+import 'landlord_repository.dart';
 import 'sample_repository.dart';
 import 'supabase_repository.dart';
 
@@ -20,4 +21,5 @@ abstract class Repository {
 
 class Services {
   static final Repository repo = AppConfig.devMode ? SampleRepository() : SupabaseRepository();
+  static final LandlordRepository landlord = AppConfig.devMode ? SampleLandlordRepository() : SupabaseLandlordRepository();
 }

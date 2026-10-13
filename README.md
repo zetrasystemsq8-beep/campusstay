@@ -24,12 +24,15 @@ Without the two secrets the app builds in **development mode** with fictional sa
 Never put the service-role key or database password in the app or repo.
 
 ## Status
-Implemented (written, unverified): splash, role choice, sign up/in/reset, student home, explore with filters and pagination,
+Implemented in Stage 2 (written, unverified): landlord dashboard with stats and renewal reminders, 5-step add/edit property flow (details, photos, facilities, verification upload, review), listing management (pause, resume, mark rented, renew, delete), viewing requests, view counting, migration 0003 (fixes + landlord stats).
+
+Run `supabase/migrations/0003_landlord.sql` after 0001 and 0002.
+
+Implemented in Stage 1 (written, unverified): splash, role choice, sign up/in/reset, student home, explore with filters and pagination,
 saved listings, property detail with gallery, message landlord, request viewing, report listing, messages thread, profile/logout,
 design tokens and reusable widgets, full schema with RLS, triggers, storage policies, admin RPCs with audit log, unit tests, CI.
 
-Not implemented: landlord dashboard, add-property flow, photo upload UI, verification upload UI, admin screens/web console,
-public landlord submission web page, edit/pause/renew UI (renew RPC exists), ads, push notifications, blocking UI,
+Not implemented: admin screens/web console (admin RPCs exist), public landlord submission web page, scheduled expiry reminders (reminders show in-app only), ads, push notifications, blocking UI,
 university picker, real photography (listings without photos show an honest "No photo uploaded" state).
 
 ## Must be verified manually

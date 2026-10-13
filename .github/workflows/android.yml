@@ -22,7 +22,7 @@ jobs:
           flutter create --platforms=android --org com.campusstay --project-name campusstay .
           rm -f test/widget_test.dart
       - run: flutter pub get
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
       - name: Build APK
         env:

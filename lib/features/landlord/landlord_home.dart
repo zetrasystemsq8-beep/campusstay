@@ -1,39 +1,47 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/tokens.dart';
-import '../../core/widgets/buttons.dart';
-import '../../core/widgets/logo.dart';
-import '../../data/auth_service.dart';
-import '../splash/splash_screen.dart';
+import '../messages/messages_screen.dart';
+import '../profile/profile_screen.dart';
+import '../../core/widgets/landlord_theme.dart';
+import 'dashboard_screen.dart';
+import 'listing_wizard.dart';
+import 'listings_screen.dart';
 
-/// Stage 1 placeholder. The landlord dashboard, add-property flow, verification
-/// upload and listing management are Stage 2 and are NOT implemented yet.
-class LandlordHome extends StatelessWidget {
+/// Landlord / agent shell with green-accented bottom navigation.
+class LandlordHome extends StatefulWidget {
   const LandlordHome({super.key});
+  @override
+  State<LandlordHome> createState() => _LandlordHomeState();
+}
+
+class _LandlordHomeState extends State<LandlordHome> {
+  int _tab = 0;
+  int _rev = 0; // bumped to reload dashboard and listings
+
+  Future<void> _addProperty() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ListingWizard()));
+    if (mounted) setState(() => _rev++);
+  }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(CS.s24),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const LogoMark(size: 72),
-              const SizedBox(height: 20),
-              Text('Landlord tools are coming next', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              const Text('Your account is set up as a landlord. The dashboard and listing flow are not built yet in this version.',
-                  textAlign: TextAlign.center, style: TextStyle(color: CS.muted)),
-              const SizedBox(height: 28),
-              OutlineActionButton(
-                icon: Icons.logout,
-                label: 'Log out',
-                onPressed: () async {
-                  await AuthService.signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const SplashScreen()), (r) => false);
-                  }
-                },
-              ),
+  Widget build(BuildContext context) => LandlordThemed(
+        child: Scaffold(
+          body: SafeArea(
+            child: IndexedStack(index: _tab, children: [
+              DashboardScreen(key: ValueKey('d$_rev'), onAdd: _addProperty, onOpenListings: () => setState(() => _tab = 1), onChanged: () => setState(() => _rev++)),
+              ListingsScreen(key: ValueKey('l$_rev'), onAdd: _addProperty),
+              const MessagesScreen(),
+              const ProfileScreen(),
             ]),
+          ),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _tab,
+            onDestinationSelected: (i) => setState(() => _tab = i),
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
+              NavigationDestination(icon: Icon(Icons.home_work_outlined), selectedIcon: Icon(Icons.home_work), label: 'Listings'),
+              NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Messages'),
+              NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+            ],
           ),
         ),
       );

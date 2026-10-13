@@ -5,6 +5,7 @@ import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/favourites_store.dart';
 import '../../data/models.dart';
+import '../../data/analytics.dart';
 import '../../data/repository.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
@@ -17,6 +18,12 @@ class PropertyDetailScreen extends StatefulWidget {
 class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   late Future<Property> _f = Services.repo.property(widget.propertyId);
   final _page = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    Analytics.recordView(widget.propertyId);
+  }
 
   @override
   void dispose() {
