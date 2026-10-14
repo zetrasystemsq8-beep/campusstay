@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
@@ -18,7 +19,7 @@ class SavedScreen extends StatelessWidget {
           future: Services.repo.favourites(),
           builder: (c, s) {
             if (s.connectionState != ConnectionState.done) return const SkeletonList();
-            if (s.hasError) return ErrorState(message: 'Could not load saved listings.', onRetry: FavouritesStore.load);
+            if (s.hasError) return ErrorView(error: s.error!, onRetry: FavouritesStore.load);
             final list = s.data!;
             if (list.isEmpty) {
               return const EmptyState(icon: Icons.favorite_border, title: 'Nothing saved yet', message: 'Tap the heart on a listing to keep it here.');

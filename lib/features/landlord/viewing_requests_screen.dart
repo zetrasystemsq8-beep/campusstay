@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/landlord_theme.dart';
 import '../../core/widgets/state_views.dart';
@@ -28,7 +29,7 @@ class _ViewingRequestsScreenState extends State<ViewingRequestsScreen> {
       if (mounted) showMessage(context, status == 'confirmed' ? 'Viewing confirmed.' : 'Viewing declined.');
       _reload();
     } catch (e) {
-      if (mounted) showMessage(context, landlordError(e), error: true);
+      if (mounted) showError(context, e);
     }
   }
 
@@ -40,7 +41,7 @@ class _ViewingRequestsScreenState extends State<ViewingRequestsScreen> {
             future: _f,
             builder: (c, s) {
               if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-              if (s.hasError) return ErrorState(message: 'Could not load viewing requests.', onRetry: _reload);
+              if (s.hasError) return ErrorView(error: s.error!, onRetry: _reload);
               if (s.data!.isEmpty) {
                 return const EmptyState(icon: Icons.event_available_outlined, title: 'No viewing requests', message: 'When a student asks to view a property, it appears here.');
               }

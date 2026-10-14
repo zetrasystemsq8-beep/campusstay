@@ -83,11 +83,13 @@ class SupabaseRepository implements Repository {
   Future<List<Conversation>> conversations() async {
     final rows = await _c
         .from('conversations')
-        .select('id, properties(title)')
+        .select('id,student_id,landlord_id,properties(title)')
         .order('created_at', ascending: false);
+    final me = _uid;
     return rows.map<Conversation>((r) {
       final p = r['properties'];
-      return Conversation(r['id'] as String, p is Map ? p['title'] as String : 'Enquiry');
+      final other = r['student_id'] == me ? r['landlord_id'] : r['student_id'];
+      return Conversation(r['id'] as String, p is Map ? p['title'] as String : 'Enquiry', other as String?);
     }).toList();
   }
 
@@ -108,6 +110,11 @@ class SupabaseRepository implements Repository {
   @override
   Future<void> sendMessage(String conversationId, String body) async {
     await _c.from('messages').insert({'conversation_id': conversationId, 'sender_id': _uid, 'body': body});
+  }
+
+  @override
+  Future<void> blockUser(String userId) async {
+    await _c.from('blocks').upsert({'blocker_id': _uid, 'blocked_id': userId});
   }
 
   @override

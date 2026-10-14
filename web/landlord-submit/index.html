@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>List your property on CampusStay</title>
+<meta name="description" content="List your student accommodation on CampusStay for free. No listing fees, no commission.">
+<style>
+  :root { --navy:#0a2457; --blue:#1b63e6; --green:#12a36b; --greensoft:#e5f6ee; --ink:#0e1b35; --muted:#66768f; --line:#e3e9f3; --danger:#d64545; --bg:#fff; --surface:#f4f7fc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0b1428; --surface:#111d38; --ink:#eef3ff; --muted:#9fb0cc; --line:#223255; --greensoft:#0f2e25; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:linear-gradient(135deg,#06173b,var(--navy) 60%,#123f95); color:#fff; padding:28px 20px 36px; text-align:center; }
+  header svg { width:56px; height:56px; }
+  header h1 { margin:8px 0 4px; font-size:26px; letter-spacing:-.5px; }
+  header p { margin:0; opacity:.85; }
+  main { max-width:520px; margin:-18px auto 40px; padding:0 16px; }
+  .card { background:var(--bg); border:1px solid var(--line); border-radius:20px; padding:20px; box-shadow:0 6px 18px rgba(10,36,87,.08); }
+  .free { background:var(--greensoft); color:var(--green); font-weight:700; border-radius:14px; padding:12px 14px; margin-bottom:16px; }
+  label { display:block; font-weight:700; margin:14px 0 6px; }
+  input, select, textarea { width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:14px; padding:14px; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--green); border-color:var(--green); }
+  .invalid { border-color:var(--danger); }
+  .err { color:var(--danger); font-size:14px; margin-top:4px; min-height:0; }
+  .hint { color:var(--muted); font-size:13px; margin-top:4px; }
+  .check { display:flex; gap:10px; align-items:flex-start; margin-top:18px; }
+  .check input { width:22px; height:22px; margin-top:2px; flex:none; }
+  .check label { margin:0; font-weight:500; }
+  button { width:100%; margin-top:20px; font:inherit; font-weight:800; color:#fff; background:var(--green); border:0; border-radius:14px; padding:16px; cursor:pointer; }
+  button[disabled] { opacity:.6; cursor:wait; }
+  .banner { display:none; border-radius:14px; padding:12px 14px; margin-bottom:14px; font-weight:600; }
+  .banner.show { display:block; background:#fdecec; color:var(--danger); }
+  .banner small { display:block; font-weight:400; margin-top:2px; }
+  .hp { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  #done { display:none; text-align:center; }
+  #done h2 { margin:6px 0; }
+  .share { display:inline-block; margin-top:14px; color:var(--green); font-weight:800; }
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:0 20px 30px; }
+</style>
+</head>
+<body>
+<header>
+  <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M8 46 L50 10 L92 46" fill="none" stroke="#1b63e6" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><rect x="20" y="42" width="60" height="50" rx="6" fill="#fff"/><rect x="42" y="62" width="16" height="30" rx="3" fill="#1b63e6"/></svg>
+  <h1>CampusStay</h1>
+  <p>Find Your Space. Live Your Dreams.</p>
+</header>
+<main>
+  <div class="card" id="formCard">
+    <div class="free">Listing is free. No listing fees. No commission.</div>
+    <div id="banner" class="banner" role="alert"></div>
+    <form id="f" novalidate>
+      <div class="hp"><label>Leave this empty <input name="website" tabindex="-1" autocomplete="off"></label></div>
+
+      <label for="name">Your name</label>
+      <input id="name" name="name" autocomplete="name" maxlength="100">
+      <div class="err" data-for="name"></div>
+
+      <label for="phone">Phone number</label>
+      <input id="phone" name="phone" inputmode="tel" autocomplete="tel" placeholder="08012345678" maxlength="20">
+      <div class="hint">Only our review team sees this. We use it to call you about your listing.</div>
+      <div class="err" data-for="phone"></div>
+
+      <label for="school_or_area">School or area the property is near</label>
+      <input id="school_or_area" name="school_or_area" placeholder="e.g. EKSU, Ado-Ekiti" maxlength="150">
+      <div class="err" data-for="school_or_area"></div>
+
+      <label for="room_type">Room type</label>
+      <select id="room_type" name="room_type">
+        <option value="">Choose one</option>
+        <option value="single_room">Single room</option>
+        <option value="shared_room">Shared room</option>
+        <option value="self_contain">Self-contain</option>
+        <option value="apartment">Apartment</option>
+        <option value="hostel">Hostel</option>
+      </select>
+      <div class="err" data-for="room_type"></div>
+
+      <label for="rent_ngn">Rent in naira (optional)</label>
+      <input id="rent_ngn" name="rent_ngn" inputmode="numeric" placeholder="150000">
+      <div class="err" data-for="rent_ngn"></div>
+
+      <label for="description">About the property (optional)</label>
+      <textarea id="description" name="description" rows="4" maxlength="2000" placeholder="Facilities, house rules, anything students should know"></textarea>
+      <div class="err" data-for="description"></div>
+
+      <div class="check">
+        <input type="checkbox" id="consent" name="consent">
+        <label for="consent">I own or manage this property, and I agree that CampusStay may contact me about listing it. Nothing is published until it has been reviewed.</label>
+      </div>
+      <div class="err" data-for="consent"></div>
+
+      <button id="go" type="submit">Send my property</button>
+    </form>
+  </div>
+
+  <div class="card" id="done" role="status">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#12a36b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.7 2.7L16 9.5"/></svg>
+    <h2>Got it. Thank you!</h2>
+    <p>Our team will call you to finish setting up your listing. Photos are added after that. Nothing goes public until it has been checked.</p>
+    <a class="share" id="share" href="#" target="_blank" rel="noopener">Share this page with another landlord on WhatsApp</a>
+  </div>
+</main>
+<footer>CampusStay never charges landlords to list. Never pay anyone to appear on CampusStay.</footer>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  var cfg = window.CAMPUSSTAY_CONFIG || {};
+  var form = document.getElementById('f'), banner = document.getElementById('banner'), go = document.getElementById('go');
+  var TIMEOUT_MS = 15000;
+
+  document.getElementById('share').href = 'https://wa.me/?text=' + encodeURIComponent('List your student accommodation for free on CampusStay: ' + location.href.split('#')[0]);
+
+  function clearErrors() {
+    banner.className = 'banner'; banner.textContent = '';
+    document.querySelectorAll('.err').forEach(function (e) { e.textContent = ''; });
+    document.querySelectorAll('.invalid').forEach(function (e) { e.classList.remove('invalid'); });
+  }
+  function fieldError(name, msg) {
+    var el = document.querySelector('.err[data-for="' + name + '"]'); if (el) el.textContent = msg;
+    var input = form.elements[name]; if (input) input.classList.add('invalid');
+  }
+  function showBanner(title, msg) {
+    banner.className = 'banner show';
+    banner.innerHTML = '';
+    var t = document.createElement('span'); t.textContent = title;
+    var s = document.createElement('small'); s.textContent = msg;
+    banner.appendChild(t); banner.appendChild(s);
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Each failure has its own message. Nothing falls into a catch-all without its details.
+  function explain(kind, extra) {
+    switch (kind) {
+      case 'not_configured': return ["This page isn't connected yet", 'The site owner still needs to finish setup. Please try again later.'];
+      case 'offline': return ["You're off the grid", "We couldn't reach the internet. Check your data or Wi-Fi, then press Send again. Nothing was lost."];
+      case 'timeout': return ["That's taking too long", 'The network is slow right now. Press Send again in a moment.'];
+      case 'rate_limited': return ['Easy there, speedster', "You've sent a few already. Please wait an hour, or call us if it's urgent."];
+      case 'bad_request': return ['Something looks off', 'We could not read that form. Refresh the page and try again.'];
+      case 'server': return ['Our side hiccuped', 'Something went wrong on our server. Please try again shortly.'];
+      default: return ['Something unexpected happened', 'Please try again. If it keeps happening, tell us: ' + extra];
+    }
+  }
+
+  function localValidate(d) {
+    var ok = true;
+    if (d.name.length < 2) { fieldError('name', 'Enter your name.'); ok = false; }
+    if (!/^\+?[0-9 ]{7,16}$/.test(d.phone)) { fieldError('phone', 'Use digits only, like 08012345678.'); ok = false; }
+    if (d.school_or_area.length < 2) { fieldError('school_or_area', 'Tell us the school or area the property is near.'); ok = false; }
+    if (!d.room_type) { fieldError('room_type', 'Choose a room type.'); ok = false; }
+    if (d.rent_ngn !== '' && !/^[0-9]{1,9}$/.test(d.rent_ngn)) { fieldError('rent_ngn', 'Enter the rent as a whole number.'); ok = false; }
+    if (!d.consent) { fieldError('consent', 'Please tick the box so we can contact you.'); ok = false; }
+    return ok;
+  }
+
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault(); clearErrors();
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) { var e0 = explain('not_configured'); showBanner(e0[0], e0[1]); return; }
+    var f = form.elements;
+    var d = {
+      name: f.name.value.trim(), phone: f.phone.value.trim(), school_or_area: f.school_or_area.value.trim(),
+      room_type: f.room_type.value, rent_ngn: f.rent_ngn.value.trim(), description: f.description.value.trim(),
+      consent: f.consent.checked, website: f.website.value
+    };
+    if (!localValidate(d)) return;
+    var body = JSON.parse(JSON.stringify(d));
+    body.rent_ngn = d.rent_ngn === '' ? null : Number(d.rent_ngn);
+
+    go.disabled = true; go.textContent = 'Sending…';
+    var ctrl = new AbortController(); var timer = setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS);
+
+    fetch(cfg.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/submit-listing', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json', 'apikey': cfg.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + cfg.SUPABASE_ANON_KEY },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) { return { res: res, data: data }; });
+    }).then(function (r) {
+      if (r.res.status === 201) {
+        document.getElementById('formCard').style.display = 'none';
+        document.getElementById('done').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      if (r.res.status === 422 && r.data.errors) {
+        Object.keys(r.data.errors).forEach(function (k) { fieldError(k, r.data.errors[k]); });
+        var first = document.querySelector('.invalid'); if (first) first.focus();
+        return;
+      }
+      var x;
+      if (r.res.status === 429) x = explain('rate_limited');
+      else if (r.res.status === 400) x = explain('bad_request');
+      else if (r.res.status >= 500) x = explain(r.data.error === 'not_configured' ? 'not_configured' : 'server');
+      else x = explain('unknown', 'HTTP ' + r.res.status + (r.data.error ? ' ' + r.data.error : ''));
+      showBanner(x[0], x[1]);
+    }).catch(function (err) {
+      var x;
+      if (err && err.name === 'AbortError') x = explain('timeout');
+      else if (err instanceof TypeError) x = explain('offline');
+      else x = explain('unknown', (err && err.name ? err.name : 'Error') + ': ' + (err && err.message ? err.message : ''));
+      showBanner(x[0], x[1]);
+    }).then(function () {
+      clearTimeout(timer); go.disabled = false; go.textContent = 'Send my property';
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../data/favourites_store.dart';
 import '../explore/explore_screen.dart';
 import '../explore/saved_screen.dart';
@@ -20,7 +21,19 @@ class _StudentShellState extends State<StudentShell> {
   @override
   void initState() {
     super.initState();
+    FavouritesStore.loadError.addListener(_onFavError);
     FavouritesStore.load();
+  }
+
+  void _onFavError() {
+    final e = FavouritesStore.loadError.value;
+    if (e != null && mounted) showError(context, e, onRetry: FavouritesStore.load);
+  }
+
+  @override
+  void dispose() {
+    FavouritesStore.loadError.removeListener(_onFavError);
+    super.dispose();
   }
 
   void _search(String q) => setState(() {

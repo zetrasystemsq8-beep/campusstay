@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/state_views.dart';
@@ -30,8 +31,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await Services.landlord.renew(l.id);
       if (mounted) showMessage(context, 'Confirmed. "${l.title}" stays live for 60 more days.');
       widget.onChanged();
-    } catch (_) {
-      if (mounted) showMessage(context, 'Could not renew. Try again.', error: true);
+    } catch (e) {
+      if (mounted) showError(context, e);
     }
   }
 
@@ -40,7 +41,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         future: _f,
         builder: (c, s) {
           if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (s.hasError) return ErrorState(message: 'Could not load your dashboard. Check your connection.', onRetry: _reload);
+          if (s.hasError) return ErrorView(error: s.error!, onRetry: _reload);
           final (st, listings) = s.data!;
           final reminders = listings.where((l) => l.needsReconfirm).toList();
           return RefreshIndicator(

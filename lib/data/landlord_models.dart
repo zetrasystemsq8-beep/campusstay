@@ -33,7 +33,7 @@ const amenityIds = {'wifi': 1, 'water': 2, 'electricity': 3, 'parking': 4, 'cctv
 
 class LandlordListing {
   String id, title, description, area, university, rentPeriod, roomType, moderation, availability, verification;
-  String? universityId, extraFees, moderationNote;
+  String? universityId, extraFees, moderationNote, ownerId;
   int rentNgn, views;
   double? distanceKm;
   DateTime? expiresAt;
@@ -55,6 +55,7 @@ class LandlordListing {
     this.universityId,
     this.extraFees,
     this.moderationNote,
+    this.ownerId,
     this.views = 0,
     this.distanceKm,
     this.expiresAt,
@@ -84,6 +85,7 @@ class LandlordListing {
       expiresAt: m['expires_at'] == null ? null : DateTime.parse(m['expires_at'] as String).toLocal(),
       views: (m['views_count'] as num?)?.toInt() ?? 0,
       moderationNote: m['moderation_note'] as String?,
+      ownerId: m['owner_id'] as String?,
       photos: photos.map((p) => PhotoRef(p['id'] as String, p['storage_path'] as String, photoUrl(p['storage_path'] as String))).toList(),
       amenities: ((m['property_amenities'] as List?) ?? [])
           .map((e) => (e as Map)['amenities'])

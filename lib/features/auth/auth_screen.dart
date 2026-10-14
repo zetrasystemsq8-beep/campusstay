@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/config.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
@@ -57,18 +58,10 @@ class _AuthScreenState extends State<AuthScreen> {
         if (mounted) _enter();
       }
     } catch (e) {
-      if (mounted) showMessage(context, _friendly(e), error: true);
+      if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  String _friendly(Object e) {
-    final s = e.toString().toLowerCase();
-    if (s.contains('invalid login')) return 'Email or password is incorrect.';
-    if (s.contains('already registered')) return 'This email already has an account. Try signing in.';
-    if (s.contains('socket') || s.contains('network')) return 'No connection. Check your internet and try again.';
-    return 'Could not complete that. Please try again.';
   }
 
   Future<void> _forgot() async {
@@ -84,8 +77,8 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await AuthService.resetPassword(email);
       if (mounted) showMessage(context, 'If that email has an account, a reset link is on its way.');
-    } catch (_) {
-      if (mounted) showMessage(context, 'Could not send the reset email. Try again.', error: true);
+    } catch (e) {
+      if (mounted) showError(context, e);
     }
   }
 

@@ -114,7 +114,8 @@ class SearchFilter {
 class Conversation {
   final String id;
   final String title;
-  const Conversation(this.id, this.title);
+  final String? otherUserId;
+  const Conversation(this.id, this.title, [this.otherUserId]);
 }
 
 class ChatMessage {

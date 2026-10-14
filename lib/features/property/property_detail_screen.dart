@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/property_widgets.dart';
@@ -38,7 +39,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       await Services.repo.sendEnquiry(p.id, text);
       if (mounted) showMessage(context, 'Message sent. Find the reply under Messages.');
     } catch (e) {
-      if (mounted) showMessage(context, _sendError(e), error: true);
+      if (mounted) showError(context, e);
     }
   }
 
@@ -59,7 +60,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       await Services.repo.requestViewing(p.id, DateTime(date.year, date.month, date.day, time.hour, time.minute), note);
       if (mounted) showMessage(context, 'Viewing requested. The landlord must confirm it before it is booked.');
     } catch (e) {
-      if (mounted) showMessage(context, _sendError(e), error: true);
+      if (mounted) showError(context, e);
     }
   }
 
@@ -76,15 +77,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       await Services.repo.report('property', p.id, reason, '');
       if (mounted) showMessage(context, 'Report sent. Our team will review it.');
     } catch (e) {
-      if (mounted) showMessage(context, _sendError(e), error: true);
+      if (mounted) showError(context, e);
     }
-  }
-
-  String _sendError(Object e) {
-    final s = e.toString().toLowerCase();
-    if (s.contains('sign in') || s.contains('jwt') || s.contains('auth')) return 'Please sign in first.';
-    if (s.contains('rate') || s.contains('too many')) return 'You are sending too fast. Try again later.';
-    return 'Could not send. Check your connection and try again.';
   }
 
   @override
@@ -94,7 +88,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           builder: (c, s) {
             if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
             if (s.hasError) {
-              return Scaffold(appBar: AppBar(), body: ErrorState(message: 'This listing could not be loaded. It may have been rented or removed.', onRetry: () => setState(() => _f = Services.repo.property(widget.propertyId))));
+              return Scaffold(appBar: AppBar(), body: ErrorView(error: s.error!, onRetry: () => setState(() => _f = Services.repo.property(widget.propertyId))));
             }
             final p = s.data!;
             return Column(children: [
@@ -120,9 +114,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               child: IconButton(
                                 tooltip: 'Save listing',
                                 icon: Icon(favs.contains(p.id) ? Icons.favorite : Icons.favorite_border, color: favs.contains(p.id) ? CS.danger : CS.ink),
-                                onPressed: () => FavouritesStore.toggle(p.id).catchError((_) {
-                                  if (mounted) showMessage(context, 'Sign in to save listings.', error: true);
-                                }),
+                                onPressed: () => FavouritesStore.toggle(p.id).catchError((Object e) {
+ if (context.mounted) showError(context, e);
+ }),
                               ),
                             ),
                           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
@@ -45,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (c, s) {
               if (s.connectionState != ConnectionState.done) return const Column(children: [SkeletonCard(), SkeletonCard()]);
               if (s.hasError) {
-                return ErrorState(message: 'Could not load listings. Check your connection.', onRetry: () => setState(() => _featured = Services.repo.search(const SearchFilter())));
+                return ErrorView(error: s.error!, onRetry: () => setState(() => _featured = Services.repo.search(const SearchFilter())));
               }
               final list = s.data!.take(5).toList();
               if (list.isEmpty) {
@@ -59,9 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       property: p,
                       saved: favs.contains(p.id),
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PropertyDetailScreen(propertyId: p.id))),
-                      onToggleSave: () => FavouritesStore.toggle(p.id).catchError((_) {
-                        if (context.mounted) showMessage(context, 'Sign in to save listings.', error: true);
-                      }),
+                      onToggleSave: () => FavouritesStore.toggle(p.id).catchError((Object e) {
+ if (context.mounted) showError(context, e);
+ }),
                     ),
                 ]),
               );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/landlord_theme.dart';
 import '../../core/widgets/property_widgets.dart';
@@ -24,7 +25,7 @@ class _ListingsScreenState extends State<ListingsScreen> {
       if (mounted) showMessage(context, ok);
       _reload();
     } catch (e) {
-      if (mounted) showMessage(context, landlordError(e), error: true);
+      if (mounted) showError(context, e);
     }
   }
 
@@ -88,7 +89,7 @@ class _ListingsScreenState extends State<ListingsScreen> {
               future: _f,
               builder: (c, s) {
                 if (s.connectionState != ConnectionState.done) return const SkeletonList();
-                if (s.hasError) return ErrorState(message: 'Could not load your listings.', onRetry: _reload);
+                if (s.hasError) return ErrorView(error: s.error!, onRetry: _reload);
                 final all = s.data!;
                 Widget tab(String bucket, String emptyTitle, String emptyMsg) {
                   final items = all.where((l) => l.bucket == bucket).toList();

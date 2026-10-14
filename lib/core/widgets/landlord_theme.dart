@@ -27,11 +27,3 @@ class StatusBadge extends StatelessWidget {
       );
 }
 
-String landlordError(Object e) {
-  final s = e.toString().toLowerCase();
-  if (s.contains('duplicate') || s.contains('23505')) return 'You already have a listing with this title and area.';
-  if (s.contains('socket') || s.contains('network') || s.contains('clientexception')) return 'No connection. Check your internet and try again.';
-  if (s.contains('row-level security') || s.contains('not allowed') || s.contains('forbidden')) return 'You are not allowed to do that.';
-  if (s.contains('cannot be submitted')) return 'This listing cannot be submitted right now.';
-  return 'Something went wrong. Please try again.';
-}

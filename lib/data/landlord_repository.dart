@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/errors.dart';
 import 'landlord_models.dart';
 
 abstract class LandlordRepository {
@@ -188,17 +189,12 @@ class SupabaseLandlordRepository implements LandlordRepository {
 
   @override
   Future<String> saveDraft(String? id, ListingInput input) async {
-    try {
-      if (id == null) {
-        final r = await _c.from('properties').insert({..._row(input), 'owner_id': _uid}).select('id').single();
-        return r['id'] as String;
-      }
-      await _c.from('properties').update(_row(input)).eq('id', id);
-      return id;
-    } on PostgrestException catch (e) {
-      if (e.code == '23505') throw Exception('duplicate listing');
-      rethrow;
+    if (id == null) {
+      final r = await _c.from('properties').insert({..._row(input), 'owner_id': _uid}).select('id').single();
+      return r['id'] as String;
     }
+    await _c.from('properties').update(_row(input)).eq('id', id);
+    return id;
   }
 
   @override
@@ -237,7 +233,7 @@ class SupabaseLandlordRepository implements LandlordRepository {
   @override
   Future<void> submitForReview(String propertyId) async {
     final r = await _c.from('properties').update({'moderation_status': 'pending'}).eq('id', propertyId).select('moderation_status').single();
-    if (r['moderation_status'] != 'pending') throw StateError('This listing cannot be submitted right now.');
+    if (r['moderation_status'] != 'pending') throw const AppException(AppErrorKind.notSubmittable);
   }
 
   @override

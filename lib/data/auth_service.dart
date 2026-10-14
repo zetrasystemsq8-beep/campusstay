@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config.dart';
+import '../core/errors.dart';
 
 class AuthService {
   static bool _demoSignedIn = false;
@@ -16,7 +17,7 @@ class AuthService {
     if (AppConfig.devMode) return _demoRole;
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return 'student';
-    final row = await Supabase.instance.client.from('profiles').select('role').eq('id', uid).single();
+    final row = await Net.run(() => Supabase.instance.client.from('profiles').select('role').eq('id', uid).single());
     return row['role'] as String;
   }
 
@@ -26,22 +27,22 @@ class AuthService {
   }
 
   static Future<bool> signUp(String email, String password, String role, String name) async {
-    final res = await Supabase.instance.client.auth.signUp(
-      email: email,
-      password: password,
-      data: {'role': role, 'full_name': name},
-    );
+    final res = await Net.run(() => Supabase.instance.client.auth.signUp(
+          email: email,
+          password: password,
+          data: {'role': role, 'full_name': name},
+        ));
     return res.session != null; // false => email confirmation required
   }
 
   static Future<void> signIn(String email, String password) =>
-      Supabase.instance.client.auth.signInWithPassword(email: email, password: password);
+      Net.run(() => Supabase.instance.client.auth.signInWithPassword(email: email, password: password));
 
   static Future<void> resetPassword(String email) =>
-      Supabase.instance.client.auth.resetPasswordForEmail(email);
+      Net.run(() => Supabase.instance.client.auth.resetPasswordForEmail(email));
 
   static Future<void> signOut() async {
     _demoSignedIn = false;
-    if (!AppConfig.devMode) await Supabase.instance.client.auth.signOut();
+    if (!AppConfig.devMode) await Net.run(() => Supabase.instance.client.auth.signOut());
   }
 }

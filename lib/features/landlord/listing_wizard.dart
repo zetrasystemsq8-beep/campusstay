@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/tokens.dart';
@@ -124,7 +125,7 @@ class _ListingWizardState extends State<ListingWizard> {
       }
       if (mounted) setState(() => _step++);
     } catch (e) {
-      if (mounted) showMessage(context, landlordError(e), error: true);
+      if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -170,7 +171,7 @@ class _ListingWizardState extends State<ListingWizard> {
         if (mounted) setState(() => _photos.add(_Photo(ref, bytes)));
       }
     } catch (e) {
-      if (mounted) showMessage(context, landlordError(e), error: true);
+      if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -181,7 +182,7 @@ class _ListingWizardState extends State<ListingWizard> {
       await Services.landlord.removePhoto(_id!, p.ref);
       if (mounted) setState(() => _photos.remove(p));
     } catch (e) {
-      if (mounted) showMessage(context, landlordError(e), error: true);
+      if (mounted) showError(context, e);
     }
   }
 
@@ -195,7 +196,7 @@ class _ListingWizardState extends State<ListingWizard> {
       await Services.landlord.uploadVerificationDoc(_id!, type, bytes, f.name);
       if (mounted) setState(() => _docs[type] = true);
     } catch (e) {
-      if (mounted) showMessage(context, landlordError(e), error: true);
+      if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -280,7 +281,7 @@ class _ListingWizardState extends State<ListingWizard> {
           FutureBuilder<List<University>>(
             future: _unis,
             builder: (c, s) {
-              if (s.hasError) return ErrorState(message: 'Could not load schools.', onRetry: () => setState(() => _unis = Services.landlord.universities()));
+              if (s.hasError) return ErrorView(error: s.error!, onRetry: () => setState(() => _unis = Services.landlord.universities()));
               final list = s.data ?? [];
               return DropdownButtonFormField<String>(
                 value: list.any((u) => u.id == _universityId) ? _universityId : null,

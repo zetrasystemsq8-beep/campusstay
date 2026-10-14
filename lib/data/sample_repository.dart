@@ -66,5 +66,8 @@ class SampleRepository implements Repository {
       _msgs[conversationId]!.add(ChatMessage('m${_msgs[conversationId]!.length + 1}', body, true, DateTime.now()));
 
   @override
+  Future<void> blockUser(String userId) async {}
+
+  @override
   Future<void> report(String targetType, String targetId, String reason, String details) async {}
 }

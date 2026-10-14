@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/property_widgets.dart';
@@ -22,7 +23,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   final _scroll = ScrollController();
   int _page = 0;
   bool _loading = true, _more = true, _loadingMore = false;
-  String? _error;
+  Object? _error;
 
   @override
   void initState() {
@@ -57,9 +58,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
         _more = r.length == Repository.pageSize;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() {
-        _error = 'Could not load listings. Check your connection.';
+        _error = e;
         _loading = false;
       });
     }
@@ -76,8 +77,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         _items.addAll(r);
         _more = r.length == Repository.pageSize;
       });
-    } catch (_) {
-      if (mounted) showMessage(context, 'Could not load more listings.', error: true);
+    } catch (e) {
+      if (mounted) showError(context, e, onRetry: _loadMore);
     } finally {
       if (mounted) setState(() => _loadingMore = false);
     }
@@ -124,7 +125,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Widget _body() {
     if (_loading) return const SkeletonList();
-    if (_error != null) return ErrorState(message: _error!, onRetry: _reload);
+    if (_error != null) return ErrorView(error: _error!, onRetry: _reload);
     if (_items.isEmpty) {
       return EmptyState(
         icon: Icons.search_off,
@@ -155,9 +156,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
               property: p,
               saved: favs.contains(p.id),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PropertyDetailScreen(propertyId: p.id))),
-              onToggleSave: () => FavouritesStore.toggle(p.id).catchError((_) {
-                if (context.mounted) showMessage(context, 'Sign in to save listings.', error: true);
-              }),
+              onToggleSave: () => FavouritesStore.toggle(p.id).catchError((Object e) {
+ if (context.mounted) showError(context, e);
+ }),
             );
           },
         ),
