@@ -148,32 +148,32 @@ class SupabaseLandlordRepository implements LandlordRepository {
 
   static const _sel = 'id,title,description,area,rent_ngn,rent_period,room_type,distance_km,extra_fees_note,'
       'moderation_status,availability_status,verification_level,expires_at,views_count,moderation_note,university_id,'
-      'universities(short_name),property_photos(id,storage_path,sort_order),property_amenities(amenities(code))';
+      'universities:cs_universities(short_name),property_photos:cs_property_photos(id,storage_path,sort_order),property_amenities:cs_property_amenities(amenities:cs_amenities(code))';
 
-  String _url(String path) => _c.storage.from('property-photos').getPublicUrl(path);
+  String _url(String path) => _c.storage.from('cs-property-photos').getPublicUrl(path);
   LandlordListing _l(Map<String, dynamic> m) => LandlordListing.fromMap(m, _url);
 
   @override
   Future<List<University>> universities() async {
-    final rows = await _c.from('universities').select('id,name,short_name').order('name');
+    final rows = await _c.from('cs_universities').select('id,name,short_name').order('name');
     return rows.map<University>((r) => University(r['id'] as String, r['name'] as String, r['short_name'] as String)).toList();
   }
 
   @override
   Future<DashboardStats> stats() async {
-    final r = await _c.rpc('landlord_stats') as Map;
+    final r = await _c.rpc('cs_landlord_stats') as Map;
     int n(String k) => (r[k] as num?)?.toInt() ?? 0;
     return DashboardStats(n('total'), n('active'), n('pending'), n('views'), n('enquiries'));
   }
 
   @override
   Future<List<LandlordListing>> myListings() async {
-    final rows = await _c.from('properties').select(_sel).eq('owner_id', _uid).order('created_at', ascending: false);
+    final rows = await _c.from('cs_properties').select(_sel).eq('owner_id', _uid).order('created_at', ascending: false);
     return rows.map<LandlordListing>(_l).toList();
   }
 
   @override
-  Future<LandlordListing> myListing(String id) async => _l(await _c.from('properties').select(_sel).eq('id', id).single());
+  Future<LandlordListing> myListing(String id) async => _l(await _c.from('cs_properties').select(_sel).eq('id', id).single());
 
   Map<String, dynamic> _row(ListingInput i) => {
         'university_id': i.universityId,
@@ -190,10 +190,10 @@ class SupabaseLandlordRepository implements LandlordRepository {
   @override
   Future<String> saveDraft(String? id, ListingInput input) async {
     if (id == null) {
-      final r = await _c.from('properties').insert({..._row(input), 'owner_id': _uid}).select('id').single();
+      final r = await _c.from('cs_properties').insert({..._row(input), 'owner_id': _uid}).select('id').single();
       return r['id'] as String;
     }
-    await _c.from('properties').update(_row(input)).eq('id', id);
+    await _c.from('cs_properties').update(_row(input)).eq('id', id);
     return id;
   }
 
@@ -201,22 +201,22 @@ class SupabaseLandlordRepository implements LandlordRepository {
   Future<PhotoRef> addPhoto(String propertyId, Uint8List bytes, String fileName, int sortOrder) async {
     final ext = _ext(fileName);
     final path = '$_uid/$propertyId/${_rid()}.$ext';
-    await _c.storage.from('property-photos').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: _mime(ext)));
-    final row = await _c.from('property_photos').insert({'property_id': propertyId, 'storage_path': path, 'sort_order': sortOrder}).select('id').single();
+    await _c.storage.from('cs-property-photos').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: _mime(ext)));
+    final row = await _c.from('cs_property_photos').insert({'property_id': propertyId, 'storage_path': path, 'sort_order': sortOrder}).select('id').single();
     return PhotoRef(row['id'] as String, path, _url(path));
   }
 
   @override
   Future<void> removePhoto(String propertyId, PhotoRef photo) async {
-    await _c.from('property_photos').delete().eq('id', photo.id);
-    await _c.storage.from('property-photos').remove([photo.path]);
+    await _c.from('cs_property_photos').delete().eq('id', photo.id);
+    await _c.storage.from('cs-property-photos').remove([photo.path]);
   }
 
   @override
   Future<void> setAmenities(String propertyId, List<String> codes) async {
-    await _c.from('property_amenities').delete().eq('property_id', propertyId);
+    await _c.from('cs_property_amenities').delete().eq('property_id', propertyId);
     if (codes.isEmpty) return;
-    await _c.from('property_amenities').insert([
+    await _c.from('cs_property_amenities').insert([
       for (final c in codes)
         if (amenityIds[c] != null) {'property_id': propertyId, 'amenity_id': amenityIds[c]},
     ]);
@@ -226,36 +226,36 @@ class SupabaseLandlordRepository implements LandlordRepository {
   Future<void> uploadVerificationDoc(String propertyId, String docType, Uint8List bytes, String fileName) async {
     final ext = _ext(fileName);
     final path = '$_uid/$propertyId/${_rid()}.$ext';
-    await _c.storage.from('verification-docs').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: _mime(ext)));
-    await _c.from('verification_submissions').insert({'user_id': _uid, 'property_id': propertyId, 'doc_type': docType, 'storage_path': path});
+    await _c.storage.from('cs-verification-docs').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: _mime(ext)));
+    await _c.from('cs_verification_submissions').insert({'user_id': _uid, 'property_id': propertyId, 'doc_type': docType, 'storage_path': path});
   }
 
   @override
   Future<void> submitForReview(String propertyId) async {
-    final r = await _c.from('properties').update({'moderation_status': 'pending'}).eq('id', propertyId).select('moderation_status').single();
+    final r = await _c.from('cs_properties').update({'moderation_status': 'pending'}).eq('id', propertyId).select('moderation_status').single();
     if (r['moderation_status'] != 'pending') throw const AppException(AppErrorKind.notSubmittable);
   }
 
   @override
   Future<void> setAvailability(String id, String status) async {
-    await _c.from('properties').update({'availability_status': status}).eq('id', id);
+    await _c.from('cs_properties').update({'availability_status': status}).eq('id', id);
   }
 
   @override
   Future<void> renew(String id) async {
-    await _c.rpc('renew_listing', params: {'p_property_id': id});
+    await _c.rpc('cs_renew_listing', params: {'p_property_id': id});
   }
 
   @override
   Future<void> delete(String id) async {
-    await _c.from('properties').delete().eq('id', id);
+    await _c.from('cs_properties').delete().eq('id', id);
   }
 
   @override
   Future<List<ViewingRequestItem>> viewingRequests() async {
     final rows = await _c
-        .from('viewing_requests')
-        .select('id,preferred_at,note,status,properties(title)')
+        .from('cs_viewing_requests')
+        .select('id,preferred_at,note,status,properties:cs_properties(title)')
         .order('preferred_at', ascending: false)
         .limit(100);
     return rows.map<ViewingRequestItem>((r) {
@@ -272,6 +272,6 @@ class SupabaseLandlordRepository implements LandlordRepository {
 
   @override
   Future<void> decideViewing(String id, String status) async {
-    await _c.from('viewing_requests').update({'status': status}).eq('id', id);
+    await _c.from('cs_viewing_requests').update({'status': status}).eq('id', id);
   }
 }

@@ -9,7 +9,7 @@ class Analytics {
   static Future<void> recordView(String propertyId) async {
     if (AppConfig.devMode) return;
     try {
-      await Net.run(() => Supabase.instance.client.rpc('record_view', params: {'p_property_id': propertyId}));
+      await Net.run(() => Supabase.instance.client.rpc('cs_record_view', params: {'p_property_id': propertyId}));
     } on AppException catch (e) {
       debugPrint('record_view failed: $e');
     }

@@ -11,7 +11,7 @@ Flutter + Supabase student-accommodation marketplace for Nigeria.
    `SUPABASE_URL` and `SUPABASE_ANON_KEY` (the anon/publishable key only).
 4. Run the "Build Android APK" workflow. Download the `campusstay-apk` artifact.
 5. To make an admin: sign up normally, then in the SQL editor run
-   `update profiles set role = 'admin' where id = '<your user id>';` (the app can never grant admin).
+   `update cs_profiles set role = 'admin' where id = '<your user id>';` (the app can never grant admin).
 
 Android platform files are generated in CI by `flutter create`, so they are not in the repo.
 Without the two secrets the app builds in **development mode** with fictional sample listings.
@@ -30,10 +30,10 @@ Stage 3 (written, unverified): admin console (review queue, approve/reject/reque
 verification document review with short-lived signed links, landlord leads, audit log), block and report a person from a chat,
 typed error handling with specific friendly messages and timeouts everywhere, public landlord submission web page.
 
-Run `supabase/migrations/0003_landlord.sql` and `0004_admin_leads.sql` after 0001 and 0002.
+All CampusStay database objects, buckets and functions are prefixed `cs_` / `cs-` so they can share a Supabase project with other apps. Run `supabase/all_in_one.sql` once (or the four migrations in order).
 
 ## Public landlord page
-1. Deploy the edge function (paste `supabase/functions/submit-listing/index.ts` into Supabase > Edge Functions, name it `submit-listing`, turn OFF "Verify JWT"; or `supabase functions deploy submit-listing --no-verify-jwt`).
+1. Deploy the edge function (paste `supabase/functions/cs-submit-listing/index.ts` into Supabase > Edge Functions, name it `cs-submit-listing`, turn OFF "Verify JWT"; or `supabase functions deploy cs-submit-listing --no-verify-jwt`).
    Optionally set a secret `IP_HASH_SALT` (any random text).
 2. In the GitHub repo: Settings > Pages > Source: GitHub Actions. Push; the `Deploy landlord page` workflow publishes `web/landlord-submit` using your two existing secrets.
 3. Share the Pages link on WhatsApp. Submissions arrive in the admin app under Leads. Nothing is ever published automatically.

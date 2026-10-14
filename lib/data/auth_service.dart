@@ -17,7 +17,7 @@ class AuthService {
     if (AppConfig.devMode) return _demoRole;
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid == null) return 'student';
-    final row = await Net.run(() => Supabase.instance.client.from('profiles').select('role').eq('id', uid).single());
+    final row = await Net.run(() => Supabase.instance.client.from('cs_profiles').select('role').eq('id', uid).single());
     return row['role'] as String;
   }
 

@@ -169,7 +169,7 @@
     go.disabled = true; go.textContent = 'Sending…';
     var ctrl = new AbortController(); var timer = setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS);
 
-    fetch(cfg.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/submit-listing', {
+    fetch(cfg.SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/cs-submit-listing', {
       method: 'POST', signal: ctrl.signal,
       headers: { 'Content-Type': 'application/json', 'apikey': cfg.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + cfg.SUPABASE_ANON_KEY },
       body: JSON.stringify(body)
