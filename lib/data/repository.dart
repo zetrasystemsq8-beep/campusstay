@@ -3,6 +3,7 @@ import '../core/config.dart';
 import 'admin_repository.dart';
 import 'guarded_repository.dart';
 import 'landlord_repository.dart';
+import 'profile_repository.dart';
 import 'sample_repository.dart';
 import 'supabase_repository.dart';
 
@@ -25,5 +26,6 @@ abstract class Repository {
 class Services {
   static final Repository repo = AppConfig.devMode ? SampleRepository() : GuardedRepository(SupabaseRepository());
   static final LandlordRepository landlord = AppConfig.devMode ? SampleLandlordRepository() : GuardedLandlordRepository(SupabaseLandlordRepository());
+  static final ProfileRepository profile = AppConfig.devMode ? SampleProfileRepository() : GuardedProfileRepository(SupabaseProfileRepository());
   static final AdminRepository admin = AppConfig.devMode ? SampleAdminRepository() : GuardedAdminRepository(SupabaseAdminRepository());
 }

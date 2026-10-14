@@ -36,10 +36,18 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL }}
+          SUPPORT_WHATSAPP: ${{ secrets.SUPPORT_WHATSAPP }}
+          TERMS_URL: ${{ secrets.TERMS_URL }}
+          PRIVACY_URL: ${{ secrets.PRIVACY_URL }}
         run: |
           flutter build apk --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=SUPPORT_EMAIL="$SUPPORT_EMAIL" \
+            --dart-define=SUPPORT_WHATSAPP="$SUPPORT_WHATSAPP" \
+            --dart-define=TERMS_URL="$TERMS_URL" \
+            --dart-define=PRIVACY_URL="$PRIVACY_URL"
       - uses: actions/upload-artifact@v4
         with:
           name: campusstay-apk
