@@ -5,7 +5,6 @@ import '../../core/widgets/error_views.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/landlord_models.dart';
-import '../../data/models.dart';
 import '../../data/repository.dart';
 
 /// Asks for a note. Returns null if cancelled.

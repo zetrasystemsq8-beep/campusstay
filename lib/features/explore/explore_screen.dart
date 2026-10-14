@@ -59,10 +59,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
         _loading = false;
       });
     } catch (e) {
-      if (mounted) setState(() {
-        _error = e;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -157,7 +159,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               saved: favs.contains(p.id),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PropertyDetailScreen(propertyId: p.id))),
               onToggleSave: () => FavouritesStore.toggle(p.id).catchError((Object e) {
- if (context.mounted) showError(context, e);
+ if (mounted) showError(context, e);
  }),
             );
           },

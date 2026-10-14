@@ -24,6 +24,6 @@ class CS {
   static const rSm = 10.0, rMd = 14.0, rLg = 20.0;
 
   static List<BoxShadow> get shadow => [
-        BoxShadow(color: navy.withOpacity(0.08), blurRadius: 18, offset: const Offset(0, 6)),
+        BoxShadow(color: navy.withValues(alpha: 0.08), blurRadius: 18, offset: const Offset(0, 6)),
       ];
 }

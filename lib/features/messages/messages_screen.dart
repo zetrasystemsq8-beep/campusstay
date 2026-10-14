@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/errors.dart';

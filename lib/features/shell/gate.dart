@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/error_views.dart';
-import '../../core/widgets/state_views.dart';
 import '../../data/auth_service.dart';
 import '../admin/admin_home.dart';
 import '../landlord/landlord_home.dart';

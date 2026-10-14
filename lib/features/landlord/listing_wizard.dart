@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../core/widgets/error_views.dart';
 import 'package:flutter/services.dart';
@@ -284,7 +283,7 @@ class _ListingWizardState extends State<ListingWizard> {
               if (s.hasError) return ErrorView(error: s.error!, onRetry: () => setState(() => _unis = Services.landlord.universities()));
               final list = s.data ?? [];
               return DropdownButtonFormField<String>(
-                value: list.any((u) => u.id == _universityId) ? _universityId : null,
+                initialValue: list.any((u) => u.id == _universityId) ? _universityId : null,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Nearest school'),
                 items: [for (final u in list) DropdownMenuItem(value: u.id, child: Text('${u.shortName} · ${u.name}', overflow: TextOverflow.ellipsis))],
@@ -319,7 +318,7 @@ class _ListingWizardState extends State<ListingWizard> {
             Expanded(
               flex: 2,
               child: DropdownButtonFormField<String>(
-                value: _period,
+                initialValue: _period,
                 decoration: const InputDecoration(labelText: 'Per'),
                 items: const [DropdownMenuItem(value: 'year', child: Text('Year')), DropdownMenuItem(value: 'month', child: Text('Month'))],
                 onChanged: (v) => setState(() => _period = v ?? 'year'),
@@ -328,7 +327,7 @@ class _ListingWizardState extends State<ListingWizard> {
           ]),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _roomType,
+            initialValue: _roomType,
             decoration: const InputDecoration(labelText: 'Room type'),
             items: [for (final e in roomTypeLabels.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
             onChanged: (v) => setState(() => _roomType = v),
