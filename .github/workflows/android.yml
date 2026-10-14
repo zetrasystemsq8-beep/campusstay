@@ -28,6 +28,8 @@ jobs:
           sed -i 's#android:label="campusstay"#android:label="CampusStay"#' $M
           grep -q "android.permission.INTERNET" $M || (echo "INTERNET permission was not added" && exit 1)
       - run: flutter pub get
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
       - name: Build APK
