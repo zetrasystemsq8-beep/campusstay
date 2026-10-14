@@ -7,6 +7,7 @@ import '../../core/widgets/logo.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/auth_service.dart';
 import '../shell/gate.dart';
+import 'role_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   final String role;
@@ -22,8 +23,20 @@ class _AuthScreenState extends State<AuthScreen> {
   final _password = TextEditingController();
   final _name = TextEditingController();
   late bool _signUp = widget.startInSignUp;
+  // True once the person has picked student, landlord or agent.
+  late final bool _roleChosen = widget.startInSignUp;
   bool _busy = false;
   bool _hide = true;
+
+  void _toggleMode() {
+    // Someone who opened "I already have an account" never saw the role choice.
+    // If they decide to sign up, send them through it first.
+    if (!_signUp && !_roleChosen) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const RoleScreen()));
+      return;
+    }
+    setState(() => _signUp = !_signUp);
+  }
 
   @override
   void dispose() {
@@ -146,7 +159,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: () => setState(() => _signUp = !_signUp),
+                  onPressed: _toggleMode,
                   child: Text(_signUp ? 'Already have an account? Log in' : "Don't have an account? Sign up"),
                 ),
               ]),
