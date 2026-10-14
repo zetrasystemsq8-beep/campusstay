@@ -21,6 +21,12 @@ jobs:
         run: |
           flutter create --platforms=android --org com.campusstay --project-name campusstay .
           rm -f test/widget_test.dart
+      - name: Allow internet in release builds and set the app name
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#&\n    <uses-permission android:name="android.permission.INTERNET"/>#' $M
+          sed -i 's#android:label="campusstay"#android:label="CampusStay"#' $M
+          grep -q "android.permission.INTERNET" $M || (echo "INTERNET permission was not added" && exit 1)
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
       - run: flutter test
