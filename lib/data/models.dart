@@ -1,3 +1,9 @@
+import 'amenity_catalog.dart';
+import 'property_extras.dart';
+
+export 'amenity_catalog.dart';
+export 'property_extras.dart';
+
 class Property {
   final String id;
   final String title;
@@ -12,6 +18,7 @@ class Property {
   final List<String> amenities;
   final List<String> photoUrls;
   final String? extraFeesNote;
+  final PropertyExtras extras;
 
   const Property({
     required this.id,
@@ -27,6 +34,7 @@ class Property {
     this.amenities = const [],
     this.photoUrls = const [],
     this.extraFeesNote,
+    this.extras = const PropertyExtras(),
   });
 
   /// [photoBase] turns a storage path into a public URL.
@@ -55,13 +63,16 @@ class Property {
       amenities: ams,
       photoUrls: photos.map((p) => photoBase(p['storage_path'] as String)).toList(),
       extraFeesNote: m['extra_fees_note'] as String?,
+      extras: PropertyExtras.fromMap(m),
     );
   }
 
   String get rentLabel => '₦${formatNaira(rentNgn)}/${rentPeriod == 'month' ? 'month' : 'year'}';
   String get roomTypeLabel => roomTypeLabels[roomType] ?? roomType;
-  String get locationLabel =>
-      distanceKm == null ? '$area, $university' : '$area, ${distanceKm!.toStringAsFixed(1)} km from $university';
+  String get school => university.isNotEmpty ? university : extras.schoolOther;
+  String get locationLabel => school.isEmpty
+      ? area
+      : (distanceKm == null ? '$area, $school' : '$area, ${distanceKm!.toStringAsFixed(1)} km from $school');
 }
 
 const roomTypeLabels = {
@@ -70,17 +81,6 @@ const roomTypeLabels = {
   'self_contain': 'Self-contain',
   'apartment': 'Apartment',
   'hostel': 'Hostel',
-};
-
-const amenityLabels = {
-  'wifi': 'WiFi',
-  'water': 'Water',
-  'electricity': 'Electricity',
-  'parking': 'Parking',
-  'cctv': 'CCTV',
-  'kitchen': 'Kitchen',
-  'laundry': 'Laundry',
-  'ac': 'AC',
 };
 
 String formatNaira(int v) {
@@ -98,17 +98,43 @@ class SearchFilter {
   final int? minRent;
   final int? maxRent;
   final String? roomType;
-  const SearchFilter({this.query = '', this.minRent, this.maxRent, this.roomType});
+  final String? universityId;
+  final String? schoolName;
+  final String? furnishing;
+  final String? forGender; // male | female: matches listings open to that gender
+  final int? minBedrooms;
+  final Set<String> amenities;
+  const SearchFilter({
+    this.query = '',
+    this.minRent,
+    this.maxRent,
+    this.roomType,
+    this.universityId,
+    this.schoolName,
+    this.furnishing,
+    this.forGender,
+    this.minBedrooms,
+    this.amenities = const {},
+  });
 
-  SearchFilter copyWith({String? query, int? minRent, int? maxRent, String? roomType, bool clearRoom = false, bool clearRent = false}) =>
-      SearchFilter(
+  SearchFilter copyWith({String? query}) => SearchFilter(
         query: query ?? this.query,
-        minRent: clearRent ? null : (minRent ?? this.minRent),
-        maxRent: clearRent ? null : (maxRent ?? this.maxRent),
-        roomType: clearRoom ? null : (roomType ?? this.roomType),
+        minRent: minRent,
+        maxRent: maxRent,
+        roomType: roomType,
+        universityId: universityId,
+        schoolName: schoolName,
+        furnishing: furnishing,
+        forGender: forGender,
+        minBedrooms: minBedrooms,
+        amenities: amenities,
       );
 
-  bool get isActive => minRent != null || maxRent != null || roomType != null;
+  int get activeCount =>
+      [minRent != null || maxRent != null, roomType != null, universityId != null, furnishing != null, forGender != null, minBedrooms != null, amenities.isNotEmpty]
+          .where((b) => b)
+          .length;
+  bool get isActive => activeCount > 0;
 }
 
 class Conversation {

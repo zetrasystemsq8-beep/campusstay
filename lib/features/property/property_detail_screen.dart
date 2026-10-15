@@ -7,6 +7,7 @@ import '../../core/widgets/state_views.dart';
 import '../../data/favourites_store.dart';
 import '../../data/models.dart';
 import '../../data/analytics.dart';
+import '../../core/widgets/property_details_widgets.dart';
 import '../../data/repository.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
@@ -146,20 +147,28 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           child: Text('Not yet verified by CampusStay. Always view the property before paying anything.', style: TextStyle(color: CS.muted, fontSize: 12.5)),
                         ),
                       const SizedBox(height: 20),
-                      Wrap(spacing: 8, runSpacing: 8, children: [
-                        Chip(label: Text(p.roomTypeLabel)),
-                        for (final a in p.amenities) FacilityTile(a),
-                      ]),
+                      Text('Key details', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      PropertyFacts(extras: p.extras, roomTypeLabel: p.roomTypeLabel),
+                      if (p.extras.landmark.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Row(children: [const Icon(Icons.place_outlined, size: 18, color: CS.muted), const SizedBox(width: 6), Expanded(child: Text(p.extras.landmark))]),
+                      ],
+                      const SizedBox(height: 20),
+                      Text('Facilities', style: Theme.of(context).textTheme.titleMedium),
+                      FacilitiesByCategory(codes: p.amenities),
                       const SizedBox(height: 20),
                       Text('About this property', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 6),
                       Text(p.description.isEmpty ? 'No description provided.' : p.description, style: Theme.of(context).textTheme.bodyLarge),
-                      if ((p.extraFeesNote ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text('Other compulsory fees', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 6),
-                        Text(p.extraFeesNote!, style: Theme.of(context).textTheme.bodyLarge),
-                      ],
+                      const SizedBox(height: 20),
+                      Text('Costs', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      CostsCard(rentLabel: p.rentLabel, rentNgn: p.rentNgn, extras: p.extras, otherFees: p.extraFeesNote),
+                      const SizedBox(height: 20),
+                      Text('House rules', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      RulesCard(extras: p.extras),
                       const SizedBox(height: 16),
                       TextButton.icon(onPressed: () => _report(p), icon: const Icon(Icons.flag_outlined, size: 18), label: const Text('Report this listing')),
                     ]),

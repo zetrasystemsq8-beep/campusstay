@@ -624,7 +624,444 @@ end $$;
 revoke all on function cs_admin_stats, cs_admin_resolve_report, cs_admin_set_lead_status from public, anon;
 grant execute on function cs_admin_stats, cs_admin_resolve_report, cs_admin_set_lead_status to authenticated;
 
-insert into cs_universities (name, short_name, city, state) values
- ('Ekiti State University', 'EKSU', 'Ado-Ekiti', 'Ekiti'),
- ('Federal University Oye-Ekiti', 'FUOYE', 'Oye-Ekiti', 'Ekiti')
-on conflict (name) do nothing;
+-- Profile screen: phone number and a name length limit. Safe to run more than once.
+alter table cs_profiles add column if not exists phone text;
+alter table cs_profiles drop constraint if exists cs_profiles_phone_check;
+alter table cs_profiles add constraint cs_profiles_phone_check
+  check (phone is null or phone ~ '^\+?[0-9 ]{7,16}$');
+alter table cs_profiles drop constraint if exists cs_profiles_name_len;
+alter table cs_profiles add constraint cs_profiles_name_len
+  check (full_name is null or char_length(full_name) <= 100);
+-- Existing RLS already lets a person update only their own row, and the
+-- cs_guard_profile_update trigger keeps role and suspension admin-only.
+
+-- Richer property details, categorised facilities, school types, filterable facilities.
+-- Safe to run more than once.
+
+-- Schools -------------------------------------------------------------------
+alter table cs_universities add column if not exists kind text not null default 'university';
+alter table cs_universities drop constraint if exists cs_universities_kind_check;
+alter table cs_universities add constraint cs_universities_kind_check
+  check (kind in ('university','polytechnic','college_of_education','other'));
+create index if not exists cs_universities_state_idx on cs_universities (state);
+
+-- Property details ----------------------------------------------------------
+alter table cs_properties
+  add column if not exists school_other text,
+  add column if not exists landmark text,
+  add column if not exists bedrooms smallint not null default 1,
+  add column if not exists bathrooms smallint not null default 1,
+  add column if not exists bathroom_type text not null default 'private',
+  add column if not exists kitchen_type text not null default 'shared',
+  add column if not exists furnishing text not null default 'unfurnished',
+  add column if not exists gender_preference text not null default 'any',
+  add column if not exists max_occupants smallint not null default 1,
+  add column if not exists available_from date,
+  add column if not exists lease_months smallint,
+  add column if not exists allows_instalments boolean not null default false,
+  add column if not exists caution_fee_ngn integer,
+  add column if not exists service_charge_ngn integer,
+  add column if not exists landlord_lives_on_site boolean not null default false,
+  add column if not exists visitors_allowed boolean not null default true,
+  add column if not exists pets_allowed boolean not null default false,
+  add column if not exists house_rules text,
+  add column if not exists amenity_codes text[] not null default '{}';
+
+alter table cs_properties drop constraint if exists cs_properties_details_check;
+alter table cs_properties add constraint cs_properties_details_check check (
+  (school_other is null or char_length(school_other) <= 150)
+  and (landmark is null or char_length(landmark) <= 200)
+  and bedrooms between 0 and 20 and bathrooms between 0 and 20
+  and bathroom_type in ('private','shared')
+  and kitchen_type in ('private','shared','none')
+  and furnishing in ('unfurnished','semi_furnished','furnished')
+  and gender_preference in ('any','male_only','female_only')
+  and max_occupants between 1 and 30
+  and (lease_months is null or lease_months between 1 and 60)
+  and (caution_fee_ngn is null or (caution_fee_ngn >= 0 and caution_fee_ngn < 100000000))
+  and (service_charge_ngn is null or (service_charge_ngn >= 0 and service_charge_ngn < 100000000))
+  and (house_rules is null or char_length(house_rules) <= 1000)
+);
+create index if not exists cs_properties_amenity_codes_idx on cs_properties using gin (amenity_codes);
+create index if not exists cs_properties_filters_idx on cs_properties (furnishing, gender_preference, bedrooms);
+
+-- Facilities ----------------------------------------------------------------
+alter table cs_amenities add column if not exists category text not null default 'comfort';
+update cs_amenities set category = 'utilities' where code in ('water','electricity');
+update cs_amenities set category = 'security' where code in ('cctv');
+update cs_amenities set category = 'convenience' where code in ('parking','kitchen','laundry');
+update cs_amenities set category = 'comfort' where code in ('wifi','ac');
+insert into cs_amenities (id, code, label, category) values
+ (9,'borehole','Borehole water','utilities'),
+ (10,'prepaid_meter','Prepaid meter','utilities'),
+ (11,'generator','Generator or inverter','utilities'),
+ (12,'solar','Solar power','utilities'),
+ (13,'fan','Ceiling fan','comfort'),
+ (14,'wardrobe','Wardrobe','comfort'),
+ (15,'bed','Bed and mattress','comfort'),
+ (16,'fridge','Fridge','comfort'),
+ (17,'tv','TV or DStv','comfort'),
+ (18,'gas_cooker','Gas cooker','comfort'),
+ (19,'tiled','Tiled floors','comfort'),
+ (20,'pop_ceiling','POP ceiling','comfort'),
+ (28,'water_heater','Water heater','comfort'),
+ (21,'security_guard','Security guard','security'),
+ (22,'gated','Gated compound','security'),
+ (23,'fenced','Fenced','security'),
+ (24,'burglar_proof','Burglar-proof doors and windows','security'),
+ (25,'study_area','Study area','convenience'),
+ (26,'balcony','Balcony','convenience'),
+ (27,'cleaning','Cleaning service','convenience'),
+ (29,'tarred_road','Tarred road access','convenience'),
+ (30,'near_transport','Close to transport','convenience'),
+ (31,'near_shops','Close to shops','convenience')
+on conflict (id) do update set code = excluded.code, label = excluded.label, category = excluded.category;
+
+-- Keep cs_properties.amenity_codes in step with cs_property_amenities (for fast filtering).
+create or replace function cs_sync_amenity_codes() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare pid uuid := coalesce(new.property_id, old.property_id);
+begin
+  perform set_config('campusstay.bypass', '1', true);
+  update cs_properties set amenity_codes = coalesce((
+    select array_agg(a.code order by a.code)
+      from cs_property_amenities pa join cs_amenities a on a.id = pa.amenity_id
+     where pa.property_id = pid), '{}')
+   where id = pid;
+  return null;
+end $$;
+drop trigger if exists cs_trg_sync_amenities on cs_property_amenities;
+create trigger cs_trg_sync_amenities after insert or delete on cs_property_amenities
+  for each row execute function cs_sync_amenity_codes();
+
+-- Backfill for listings created before this migration.
+select set_config('campusstay.bypass', '1', false);
+update cs_properties p set amenity_codes = coalesce((
+  select array_agg(a.code order by a.code)
+    from cs_property_amenities pa join cs_amenities a on a.id = pa.amenity_id
+   where pa.property_id = p.id), '{}');
+select set_config('campusstay.bypass', '', false);
+
+-- Guard: any change to listing substance sends an approved listing back to review.
+create or replace function cs_guard_property() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  bypass boolean := coalesce(current_setting('campusstay.bypass', true), '') = '1';
+  ignore_cols text[] := array['moderation_status','availability_status','verification_level','expires_at',
+    'views_count','moderation_note','updated_at','created_at','amenity_codes','owner_id'];
+begin
+  if tg_op = 'INSERT' then
+    if not cs_is_admin() then
+      new.moderation_status := 'draft';
+      new.verification_level := 'unverified';
+      new.expires_at := null;
+      new.views_count := 0;
+      new.moderation_note := null;
+      new.amenity_codes := '{}';
+    end if;
+    return new;
+  end if;
+
+  new.owner_id := old.owner_id;
+  new.updated_at := now();
+  if bypass or cs_is_admin() then
+    return new;
+  end if;
+
+  new.verification_level := old.verification_level;
+  new.expires_at := old.expires_at;
+  new.views_count := old.views_count;
+  new.moderation_note := old.moderation_note;
+  new.amenity_codes := old.amenity_codes;
+
+  if new.moderation_status is distinct from old.moderation_status then
+    if not (new.moderation_status = 'pending' and old.moderation_status in ('draft','needs_changes','rejected')) then
+      new.moderation_status := old.moderation_status;
+    end if;
+  end if;
+
+  if old.moderation_status = 'approved' and new.moderation_status = 'approved'
+     and (to_jsonb(new) - ignore_cols) is distinct from (to_jsonb(old) - ignore_cols) then
+    new.moderation_status := 'pending';
+  end if;
+  return new;
+end $$;
+
+-- Nigerian higher institutions (universities, polytechnics, colleges of education).
+-- Built from general knowledge: spot-check it, and add or correct schools with SQL as needed.
+-- Safe to run more than once.
+insert into cs_universities (name, short_name, city, state, kind) values
+  ('University of Ibadan','UI','Ibadan','Oyo','university'),
+  ('University of Lagos','UNILAG','Lagos','Lagos','university'),
+  ('University of Nigeria, Nsukka','UNN','Nsukka','Enugu','university'),
+  ('Obafemi Awolowo University','OAU','Ile-Ife','Osun','university'),
+  ('Ahmadu Bello University','ABU','Zaria','Kaduna','university'),
+  ('University of Benin','UNIBEN','Benin City','Edo','university'),
+  ('University of Ilorin','UNILORIN','Ilorin','Kwara','university'),
+  ('University of Jos','UNIJOS','Jos','Plateau','university'),
+  ('University of Calabar','UNICAL','Calabar','Cross River','university'),
+  ('University of Port Harcourt','UNIPORT','Port Harcourt','Rivers','university'),
+  ('University of Maiduguri','UNIMAID','Maiduguri','Borno','university'),
+  ('Bayero University Kano','BUK','Kano','Kano','university'),
+  ('Usmanu Danfodiyo University','UDUS','Sokoto','Sokoto','university'),
+  ('University of Uyo','UNIUYO','Uyo','Akwa Ibom','university'),
+  ('University of Abuja','UNIABUJA','Gwagwalada','FCT','university'),
+  ('Federal University of Technology, Akure','FUTA','Akure','Ondo','university'),
+  ('Federal University of Technology, Minna','FUTMINNA','Minna','Niger','university'),
+  ('Federal University of Technology, Owerri','FUTO','Owerri','Imo','university'),
+  ('Federal University of Agriculture, Abeokuta','FUNAAB','Abeokuta','Ogun','university'),
+  ('Michael Okpara University of Agriculture, Umudike','MOUAU','Umudike','Abia','university'),
+  ('Modibbo Adama University','MAU','Yola','Adamawa','university'),
+  ('Abubakar Tafawa Balewa University','ATBU','Bauchi','Bauchi','university'),
+  ('Nnamdi Azikiwe University','UNIZIK','Awka','Anambra','university'),
+  ('Federal University Oye-Ekiti','FUOYE','Oye-Ekiti','Ekiti','university'),
+  ('Federal University Lafia','FULAFIA','Lafia','Nasarawa','university'),
+  ('Federal University Lokoja','FULOKOJA','Lokoja','Kogi','university'),
+  ('Federal University Wukari','FUWUKARI','Wukari','Taraba','university'),
+  ('Federal University Dutse','FUD','Dutse','Jigawa','university'),
+  ('Federal University Dutsin-Ma','FUDMA','Dutsin-Ma','Katsina','university'),
+  ('Federal University Gusau','FUGUS','Gusau','Zamfara','university'),
+  ('Federal University Kashere','FUKASHERE','Kashere','Gombe','university'),
+  ('Federal University Birnin Kebbi','FUBK','Birnin Kebbi','Kebbi','university'),
+  ('Federal University Gashua','FUGASHUA','Gashua','Yobe','university'),
+  ('Federal University Otuoke','FUOTUOKE','Otuoke','Bayelsa','university'),
+  ('Alex Ekwueme Federal University, Ndufu-Alike','AE-FUNAI','Ikwo','Ebonyi','university'),
+  ('Federal University of Petroleum Resources','FUPRE','Effurun','Delta','university'),
+  ('Federal University of Agriculture, Makurdi','FUAM','Makurdi','Benue','university'),
+  ('Federal University of Health Sciences, Otukpo','FUHSO','Otukpo','Benue','university'),
+  ('Federal University of Health Sciences, Ila-Orangun','FUHSI','Ila-Orangun','Osun','university'),
+  ('Federal University of Technology, Ikot Abasi','FUTIA','Ikot Abasi','Akwa Ibom','university'),
+  ('Federal University of Agriculture and Development Studies, Iragbiji','FUADSI','Iragbiji','Osun','university'),
+  ('Federal University of Environment and Technology, Ogoni','FUETO','Ogoni','Rivers','university'),
+  ('Federal University of Applied Sciences, Kachia','FUASK','Kachia','Kaduna','university'),
+  ('Federal University of Technology, Babura','FUTB','Babura','Jigawa','university'),
+  ('Federal University of Transportation, Daura','FUTD','Daura','Katsina','university'),
+  ('Nigerian Defence Academy','NDA','Kaduna','Kaduna','university'),
+  ('Nigerian Army University, Biu','NAUB','Biu','Borno','university'),
+  ('National Open University of Nigeria','NOUN','Abuja','FCT','university'),
+  ('Nigerian Police Academy','POLAC','Wudil','Kano','university'),
+  ('Adeyemi Federal University of Education','AFUED','Ondo','Ondo','university'),
+  ('Alvan Ikoku University of Education','AIUE','Owerri','Imo','university'),
+  ('Lagos State University','LASU','Ojo','Lagos','university'),
+  ('Lagos State University of Science and Technology','LASUSTECH','Ikorodu','Lagos','university'),
+  ('Lagos State University of Education','LASUED','Ijanikin','Lagos','university'),
+  ('Ekiti State University','EKSU','Ado-Ekiti','Ekiti','university'),
+  ('Bamidele Olumilua University of Education, Science and Technology','BOUESTI','Ikere-Ekiti','Ekiti','university'),
+  ('Ambrose Alli University','AAU','Ekpoma','Edo','university'),
+  ('Edo State University','EDOUNI','Uzairue','Edo','university'),
+  ('Rivers State University','RSU','Port Harcourt','Rivers','university'),
+  ('Ignatius Ajuru University of Education','IAUE','Port Harcourt','Rivers','university'),
+  ('Delta State University','DELSU','Abraka','Delta','university'),
+  ('Delta State University of Science and Technology','DSUST','Ozoro','Delta','university'),
+  ('University of Delta','UNIDEL','Agbor','Delta','university'),
+  ('Imo State University','IMSU','Owerri','Imo','university'),
+  ('Enugu State University of Science and Technology','ESUT','Enugu','Enugu','university'),
+  ('Abia State University','ABSU','Uturu','Abia','university'),
+  ('Ebonyi State University','EBSU','Abakaliki','Ebonyi','university'),
+  ('Chukwuemeka Odumegwu Ojukwu University','COOU','Uli','Anambra','university'),
+  ('Olabisi Onabanjo University','OOU','Ago-Iwoye','Ogun','university'),
+  ('Moshood Abiola University of Science and Technology','MAUSTECH','Abeokuta','Ogun','university'),
+  ('Tai Solarin University of Education','TASUED','Ijagun','Ogun','university'),
+  ('Adekunle Ajasin University','AAUA','Akungba-Akoko','Ondo','university'),
+  ('Olusegun Agagu University of Science and Technology','OAUSTECH','Okitipupa','Ondo','university'),
+  ('University of Medical Sciences','UNIMED','Ondo','Ondo','university'),
+  ('Osun State University','UNIOSUN','Osogbo','Osun','university'),
+  ('Ladoke Akintola University of Technology','LAUTECH','Ogbomoso','Oyo','university'),
+  ('Emmanuel Alayande University of Education','EAUED','Oyo','Oyo','university'),
+  ('Technical University, Ibadan','TECHIBA','Ibadan','Oyo','university'),
+  ('Niger Delta University','NDU','Yenagoa','Bayelsa','university'),
+  ('University of Africa, Toru-Orua','UAT','Toru-Orua','Bayelsa','university'),
+  ('Akwa Ibom State University','AKSU','Ikot Akpaden','Akwa Ibom','university'),
+  ('Cross River University of Technology','CRUTECH','Calabar','Cross River','university'),
+  ('Benue State University','BSU','Makurdi','Benue','university'),
+  ('Plateau State University','PLASU','Bokkos','Plateau','university'),
+  ('Prince Abubakar Audu University','PAAU','Anyigba','Kogi','university'),
+  ('Kwara State University','KWASU','Malete','Kwara','university'),
+  ('Ahman Pategi University','APU','Patigi','Kwara','university'),
+  ('Kaduna State University','KASU','Kaduna','Kaduna','university'),
+  ('Kano University of Science and Technology','KUST','Wudil','Kano','university'),
+  ('Yusuf Maitama Sule University','YUMSUK','Kano','Kano','university'),
+  ('Sokoto State University','SSU','Sokoto','Sokoto','university'),
+  ('Gombe State University','GSU','Gombe','Gombe','university'),
+  ('Taraba State University','TSU','Jalingo','Taraba','university'),
+  ('Adamawa State University','ADSU','Mubi','Adamawa','university'),
+  ('Bauchi State University','BASUG','Gadau','Bauchi','university'),
+  ('Borno State University','BOSU','Maiduguri','Borno','university'),
+  ('Yobe State University','YSU','Damaturu','Yobe','university'),
+  ('Sule Lamido University','SLU','Kafin Hausa','Jigawa','university'),
+  ('Umaru Musa Yar''adua University','UMYU','Katsina','Katsina','university'),
+  ('Kebbi State University of Science and Technology','KSUSTA','Aliero','Kebbi','university'),
+  ('Nasarawa State University','NSUK','Keffi','Nasarawa','university'),
+  ('Ibrahim Badamasi Babangida University','IBBU','Lapai','Niger','university'),
+  ('Covenant University','CU','Ota','Ogun','university'),
+  ('Babcock University','BU','Ilishan-Remo','Ogun','university'),
+  ('Afe Babalola University','ABUAD','Ado-Ekiti','Ekiti','university'),
+  ('Landmark University','LMU','Omu-Aran','Kwara','university'),
+  ('Bowen University','BOWEN','Iwo','Osun','university'),
+  ('Redeemer''s University','RUN','Ede','Osun','university'),
+  ('Pan-Atlantic University','PAU','Lagos','Lagos','university'),
+  ('American University of Nigeria','AUN','Yola','Adamawa','university'),
+  ('Bells University of Technology','BELLSTECH','Ota','Ogun','university'),
+  ('Crawford University','CRAWFORD','Igbesa','Ogun','university'),
+  ('Crescent University','CRESCENT','Abeokuta','Ogun','university'),
+  ('Caleb University','CALEB','Imota','Lagos','university'),
+  ('Lead City University','LCU','Ibadan','Oyo','university'),
+  ('Ajayi Crowther University','ACU','Oyo','Oyo','university'),
+  ('Adeleke University','ADELEKE','Ede','Osun','university'),
+  ('Achievers University','ACHIEVERS','Owo','Ondo','university'),
+  ('Elizade University','ELIZADE','Ilara-Mokin','Ondo','university'),
+  ('Joseph Ayo Babalola University','JABU','Ikeji-Arakeji','Osun','university'),
+  ('Oduduwa University','ODU','Ipetumodu','Osun','university'),
+  ('Fountain University','FUO','Osogbo','Osun','university'),
+  ('Kola Daisi University','KDU','Ibadan','Oyo','university'),
+  ('Mountain Top University','MTU','Prayer City','Ogun','university'),
+  ('McPherson University','MCU','Ajebo','Ogun','university'),
+  ('Chrisland University','CHRISLAND','Abeokuta','Ogun','university'),
+  ('Hallmark University','HALLMARK','Ijebu-Itele','Ogun','university'),
+  ('Christopher University','CHRISTOPHER','Mowe','Ogun','university'),
+  ('Wesley University','WESLEY','Ondo','Ondo','university'),
+  ('Southwestern University, Nigeria','SWU','Okun-Owa','Ogun','university'),
+  ('Anchor University','AUL','Ayobo','Lagos','university'),
+  ('Augustine University','AUI','Ilara-Epe','Lagos','university'),
+  ('Trinity University','TRINITY','Yaba','Lagos','university'),
+  ('Eko University of Medicine and Health Sciences','EKOUNIMED','Ijanikin','Lagos','university'),
+  ('Atiba University','ATIBA','Oyo','Oyo','university'),
+  ('Dominion University','DOMINION','Ibadan','Oyo','university'),
+  ('Dominican University Ibadan','DUI','Ibadan','Oyo','university'),
+  ('Precious Cornerstone University','PCU','Ibadan','Oyo','university'),
+  ('Thomas Adewumi University','TAU','Oko','Kwara','university'),
+  ('Al-Hikmah University','AHU','Ilorin','Kwara','university'),
+  ('Summit University','SUMMIT','Offa','Kwara','university'),
+  ('Ojaja University','OJAJA','Ilorin','Kwara','university'),
+  ('Kings University','KINGS','Odeomu','Osun','university'),
+  ('Westland University','WESTLAND','Iwo','Osun','university'),
+  ('Venite University','VENITE','Iloro-Ekiti','Ekiti','university'),
+  ('Nile University of Nigeria','NILE','Abuja','FCT','university'),
+  ('Baze University','BAZE','Abuja','FCT','university'),
+  ('Veritas University','VERITAS','Abuja','FCT','university'),
+  ('Cosmopolitan University','COSMOPOLITAN','Abuja','FCT','university'),
+  ('African University of Science and Technology','AUST','Abuja','FCT','university'),
+  ('Philomath University','PHILOMATH','Kuje','FCT','university'),
+  ('Bingham University','BINGHAM','Karu','Nasarawa','university'),
+  ('Madonna University','MADONNA','Okija','Anambra','university'),
+  ('Godfrey Okoye University','GOU','Enugu','Enugu','university'),
+  ('Paul University','PAULUNI','Awka','Anambra','university'),
+  ('Tansian University','TANSIAN','Umunya','Anambra','university'),
+  ('Igbinedion University','IUO','Okada','Edo','university'),
+  ('Benson Idahosa University','BIU','Benin City','Edo','university'),
+  ('Wellspring University','WELLSPRING','Benin City','Edo','university'),
+  ('Samuel Adegboyega University','SAU','Ogwa','Edo','university'),
+  ('Mudiame University','MUDIAME','Irrua','Edo','university'),
+  ('Western Delta University','WDU','Oghara','Delta','university'),
+  ('Novena University','NOVENA','Ogume','Delta','university'),
+  ('Southern Delta University','SDU','Ozoro','Delta','university'),
+  ('Edwin Clark University','ECU','Kiagbodo','Delta','university'),
+  ('Margaret Lawrence University','MLU','Umunya','Delta','university'),
+  ('Admiralty University of Nigeria','ADUN','Ibusa','Delta','university'),
+  ('Obong University','OBONG','Obong Ntak','Akwa Ibom','university'),
+  ('Topfaith University','TOPFAITH','Mkpatak','Akwa Ibom','university'),
+  ('Ritman University','RITMAN','Ikot Ekpene','Akwa Ibom','university'),
+  ('Arthur Jarvis University','AJU','Akpabuyo','Cross River','university'),
+  ('Clifford University','CLIFFORD','Owerrinta','Abia','university'),
+  ('Rhema University','RHEMA','Aba','Abia','university'),
+  ('Gregory University','GREGORY','Uturu','Abia','university'),
+  ('Spiritan University','SPIRITAN','Nneochi','Abia','university'),
+  ('Lux Mundi University','LUXMUNDI','Umuahia','Abia','university'),
+  ('Evangel University','EVANGEL','Akaeze','Ebonyi','university'),
+  ('Hezekiah University','HEZEKIAH','Umudi','Imo','university'),
+  ('Eastern Palm University','EPU','Ogboko','Imo','university'),
+  ('Coal City University','CCU','Enugu','Enugu','university'),
+  ('Caritas University','CARITAS','Amorji-Nike','Enugu','university'),
+  ('Renaissance University','RENAISSANCE','Ugbawka','Enugu','university'),
+  ('Skyline University Nigeria','SKYLINE','Kano','Kano','university'),
+  ('Maryam Abacha American University of Nigeria','MAAUN','Kano','Kano','university'),
+  ('Khadija University','KHADIJA','Majia','Kano','university'),
+  ('Greenfield University','GREENFIELD','Kasarami','Kaduna','university'),
+  ('Karl-Kumm University','KARLKUMM','Vom','Plateau','university'),
+  ('Pamo University of Medical Sciences','PUMS','Port Harcourt','Rivers','university'),
+  ('Yaba College of Technology','YABATECH','Yaba','Lagos','polytechnic'),
+  ('Lagos State Polytechnic','LASPOTECH','Ikorodu','Lagos','polytechnic'),
+  ('Lagos City Polytechnic','LCP','Ikeja','Lagos','polytechnic'),
+  ('Federal Polytechnic Ado-Ekiti','FEDPOLYADO','Ado-Ekiti','Ekiti','polytechnic'),
+  ('Federal Polytechnic Ilaro','FEDPOLYILARO','Ilaro','Ogun','polytechnic'),
+  ('Federal Polytechnic Ede','FEDPOLYEDE','Ede','Osun','polytechnic'),
+  ('Federal Polytechnic Ayede','FPA','Ayede','Oyo','polytechnic'),
+  ('Federal Polytechnic Ile-Oluji','FEPOLILE','Ile-Oluji','Ondo','polytechnic'),
+  ('Federal Polytechnic Offa','OFFAPOLY','Offa','Kwara','polytechnic'),
+  ('Federal Polytechnic Idah','FPI','Idah','Kogi','polytechnic'),
+  ('Federal Polytechnic Bida','FEDPOLYBIDA','Bida','Niger','polytechnic'),
+  ('Federal Polytechnic Nekede','FEDPONEK','Owerri','Imo','polytechnic'),
+  ('Federal Polytechnic Oko','FEDPOLYOKO','Oko','Anambra','polytechnic'),
+  ('Federal Polytechnic Ngodo-Isuochi','FPNI','Ngodo-Isuochi','Abia','polytechnic'),
+  ('Akanu Ibiam Federal Polytechnic','AIFPU','Unwana','Ebonyi','polytechnic'),
+  ('Federal Polytechnic Auchi','AUCHIPOLY','Auchi','Edo','polytechnic'),
+  ('Federal Polytechnic Orogun','FEDPOLYOROGUN','Orogun','Delta','polytechnic'),
+  ('Federal Polytechnic Ekowe','FPE','Ekowe','Bayelsa','polytechnic'),
+  ('Federal Polytechnic Ukana','FPU','Ukana','Akwa Ibom','polytechnic'),
+  ('Federal Polytechnic Ugep','FEDPOLYUGEP','Ugep','Cross River','polytechnic'),
+  ('Federal Polytechnic Wannune','FPW','Wannune','Benue','polytechnic'),
+  ('Federal Polytechnic Nasarawa','FEDPONAS','Nasarawa','Nasarawa','polytechnic'),
+  ('Federal Polytechnic Nyak Shendam','FPNS','Shendam','Plateau','polytechnic'),
+  ('Kaduna Polytechnic','KADPOLY','Kaduna','Kaduna','polytechnic'),
+  ('Nuhu Bamalli Polytechnic','NUBAPOLY','Zaria','Kaduna','polytechnic'),
+  ('Federal Polytechnic Bauchi','FEDPOLYBAUCHI','Bauchi','Bauchi','polytechnic'),
+  ('Federal Polytechnic Damaturu','FEDPOLYDAM','Damaturu','Yobe','polytechnic'),
+  ('Federal Polytechnic Mubi','FEDPOLYMUBI','Mubi','Adamawa','polytechnic'),
+  ('Federal Polytechnic Bali','FPB','Bali','Taraba','polytechnic'),
+  ('Federal Polytechnic Kaltungo','FEDPOLYKALTUNGO','Kaltungo','Gombe','polytechnic'),
+  ('Federal Polytechnic Monguno','FPM','Monguno','Borno','polytechnic'),
+  ('Federal Polytechnic Daura','FPD','Daura','Katsina','polytechnic'),
+  ('Federal Polytechnic Kaura Namoda','FEDPOLYNAM','Kaura Namoda','Zamfara','polytechnic'),
+  ('Hussaini Adamu Federal Polytechnic','HAFEDPOLY','Kazaure','Jigawa','polytechnic'),
+  ('Waziri Umaru Federal Polytechnic','WUFPBK','Birnin Kebbi','Kebbi','polytechnic'),
+  ('The Polytechnic, Ibadan','IBADANPOLY','Ibadan','Oyo','polytechnic'),
+  ('Ibarapa Polytechnic','IBARAPOLY','Eruwa','Oyo','polytechnic'),
+  ('Moshood Abiola Polytechnic','MAPOLY','Abeokuta','Ogun','polytechnic'),
+  ('Abraham Adesanya Polytechnic','AAPOLY','Ijebu-Igbo','Ogun','polytechnic'),
+  ('Gateway Polytechnic','GATEWAYPOLY','Saapade','Ogun','polytechnic'),
+  ('Osun State Polytechnic','OSPOLY','Iree','Osun','polytechnic'),
+  ('The Polytechnic, Ile-Ife','POLYIFE','Ile-Ife','Osun','polytechnic'),
+  ('Rufus Giwa Polytechnic','RUGIPO','Owo','Ondo','polytechnic'),
+  ('Kwara State Polytechnic','KWARAPOLY','Ilorin','Kwara','polytechnic'),
+  ('Kogi State Polytechnic','KOGIPOLY','Lokoja','Kogi','polytechnic'),
+  ('Niger State Polytechnic','NIGERPOLY','Zungeru','Niger','polytechnic'),
+  ('Plateau State Polytechnic','PLAPOLY','Barkin Ladi','Plateau','polytechnic'),
+  ('Kano State Polytechnic','KANOPOLY','Kano','Kano','polytechnic'),
+  ('Delta State Polytechnic, Ozoro','DSPZ','Ozoro','Delta','polytechnic'),
+  ('Delta State Polytechnic, Ogwashi-Uku','DELTAPOLY','Ogwashi-Uku','Delta','polytechnic'),
+  ('Akwa Ibom State Polytechnic','AKSPOLY','Ikot Osurua','Akwa Ibom','polytechnic'),
+  ('Kenule Beeson Saro-Wiwa Polytechnic','KENPOLY','Bori','Rivers','polytechnic'),
+  ('Institute of Management and Technology','IMT','Enugu','Enugu','polytechnic'),
+  ('Abia State Polytechnic','ABIAPOLY','Aba','Abia','polytechnic'),
+  ('Imo State Polytechnic','IMOPOLY','Umuagwo','Imo','polytechnic'),
+  ('Anambra State Polytechnic','ANAMPOLY','Mgbakwu','Anambra','polytechnic'),
+  ('Benue State Polytechnic','BENPOLY','Ugbokolo','Benue','polytechnic'),
+  ('Abubakar Tatari Ali Polytechnic','ATAP','Bauchi','Bauchi','polytechnic'),
+  ('Adamawa State Polytechnic','ADAMAWAPOLY','Yola','Adamawa','polytechnic'),
+  ('Gombe State Polytechnic','GOMBEPOLY','Bajoga','Gombe','polytechnic'),
+  ('Mai Idris Alooma Polytechnic','MIAPOLY','Geidam','Yobe','polytechnic'),
+  ('Ramat Polytechnic','RAMATPOLY','Maiduguri','Borno','polytechnic'),
+  ('Hassan Usman Katsina Polytechnic','HUKPOLY','Katsina','Katsina','polytechnic'),
+  ('Umaru Ali Shinkafi Polytechnic','UASPOLY','Sokoto','Sokoto','polytechnic'),
+  ('Abdu Gusau Polytechnic','AGPOLY','Talata Mafara','Zamfara','polytechnic'),
+  ('Taraba State Polytechnic','TARABAPOLY','Suntai','Taraba','polytechnic'),
+  ('Federal College of Education (Technical), Akoka','FCETAKOKA','Akoka','Lagos','college_of_education'),
+  ('Adeniran Ogunsanya College of Education','AOCOED','Ijanikin','Lagos','college_of_education'),
+  ('Michael Otedola College of Primary Education','MOCPED','Noforija','Lagos','college_of_education'),
+  ('Federal College of Education, Abeokuta','FCEABEOKUTA','Abeokuta','Ogun','college_of_education'),
+  ('Federal College of Education, Iwo','FCEIWO','Iwo','Osun','college_of_education'),
+  ('Federal College of Education (Special), Oyo','FCEOYO','Oyo','Oyo','college_of_education'),
+  ('Federal College of Education, Zaria','FCEZARIA','Zaria','Kaduna','college_of_education'),
+  ('Federal College of Education, Kano','FCEKANO','Kano','Kano','college_of_education'),
+  ('Federal College of Education, Katsina','FCEKATSINA','Katsina','Katsina','college_of_education'),
+  ('Federal College of Education, Kontagora','FCEKONTAGORA','Kontagora','Niger','college_of_education'),
+  ('Federal College of Education, Okene','FCEOKENE','Okene','Kogi','college_of_education'),
+  ('Federal College of Education, Pankshin','FCEPANKSHIN','Pankshin','Plateau','college_of_education'),
+  ('Federal College of Education (Technical), Gombe','FCETGOMBE','Gombe','Gombe','college_of_education'),
+  ('Federal College of Education, Yola','FCEYOLA','Yola','Adamawa','college_of_education'),
+  ('Federal College of Education, Obudu','FCEOBUDU','Obudu','Cross River','college_of_education'),
+  ('Federal College of Education, Eha-Amufu','FCEEHA','Eha-Amufu','Enugu','college_of_education'),
+  ('Kwara State College of Education, Oro','KWARACOEORO','Oro','Kwara','college_of_education'),
+  ('Kwara State College of Education, Ilorin','KWARACOE','Ilorin','Kwara','college_of_education')
+on conflict (name) do update set short_name = excluded.short_name, city = excluded.city, state = excluded.state, kind = excluded.kind;
+

@@ -162,7 +162,7 @@ class _Card extends StatelessWidget {
               Expanded(child: Text(l.title, style: Theme.of(context).textTheme.titleMedium)),
               PopupMenuButton<String>(tooltip: 'Listing actions', onSelected: onAction, itemBuilder: (_) => items),
             ]),
-            Text('${l.area}, ${l.university} · ${l.roomTypeLabel}', style: Theme.of(context).textTheme.bodySmall),
+            Text('${l.area}, ${l.school} · ${l.roomTypeLabel}', style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 8),
             Row(children: [
               Text(l.rentLabel, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: CS.green)),

@@ -129,23 +129,12 @@ class FacilityTile extends StatelessWidget {
   final String code;
   const FacilityTile(this.code, {super.key});
 
-  static const _icons = {
-    'wifi': Icons.wifi,
-    'water': Icons.water_drop_outlined,
-    'electricity': Icons.bolt,
-    'parking': Icons.local_parking,
-    'cctv': Icons.videocam_outlined,
-    'kitchen': Icons.kitchen_outlined,
-    'laundry': Icons.local_laundry_service_outlined,
-    'ac': Icons.ac_unit,
-  };
-
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(color: CS.blueSoft, borderRadius: BorderRadius.circular(CS.rSm)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(_icons[code] ?? Icons.check, size: 17, color: CS.blue),
+          Icon(amenityIcons[code] ?? Icons.check, size: 17, color: CS.blue),
           const SizedBox(width: 6),
           Text(amenityLabels[code] ?? code, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         ]),

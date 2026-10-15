@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/error_views.dart';
+import '../../core/widgets/property_details_widgets.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/landlord_models.dart';
@@ -81,7 +82,7 @@ class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
                             padding: const EdgeInsets.all(CS.s12),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(l.title, style: Theme.of(context).textTheme.titleMedium),
-                              Text('${l.area}, ${l.university} · ${l.rentLabel}', style: Theme.of(context).textTheme.bodySmall),
+                              Text('${l.area}, ${l.school} · ${l.rentLabel}', style: Theme.of(context).textTheme.bodySmall),
                               const SizedBox(height: 6),
                               VerificationBadge(l.verification),
                             ]),
@@ -163,17 +164,23 @@ class _ListingReviewScreenState extends State<ListingReviewScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(l.title, style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 4),
-                Text('${l.area}, ${l.university}${l.distanceKm == null ? '' : ' · ${l.distanceKm} km'}', style: Theme.of(context).textTheme.bodySmall),
+                Text('${l.area}, ${l.school}${l.distanceKm == null ? '' : ' · ${l.distanceKm} km'}', style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 10),
                 Text(l.rentLabel, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: CS.blue)),
                 const SizedBox(height: 10),
-                Wrap(spacing: 8, runSpacing: 8, children: [VerificationBadge(l.verification), Chip(label: Text(l.roomTypeLabel)), for (final a in l.amenities) FacilityTile(a)]),
+                VerificationBadge(l.verification),
+                const SizedBox(height: 10),
+                PropertyFacts(extras: l.extras, roomTypeLabel: l.roomTypeLabel),
+                if (l.universityId == null && l.extras.schoolOther.isNotEmpty)
+                  Padding(padding: const EdgeInsets.only(top: 8), child: Text('School not on the list: ${l.extras.schoolOther}. Add it to cs_universities if it is real.', style: const TextStyle(color: CS.warn, fontWeight: FontWeight.w600))),
+                if (l.extras.landmark.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Landmark: ${l.extras.landmark}')),
+                FacilitiesByCategory(codes: l.amenities),
                 const SizedBox(height: 14),
                 Text(l.description.isEmpty ? 'No description.' : l.description),
-                if ((l.extraFees ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text('Other fees: ${l.extraFees}'),
-                ],
+                const SizedBox(height: 14),
+                CostsCard(rentLabel: l.rentLabel, rentNgn: l.rentNgn, extras: l.extras, otherFees: l.extraFees),
+                const SizedBox(height: 10),
+                RulesCard(extras: l.extras),
                 const SizedBox(height: 14),
                 Text('${l.photos.length} photo${l.photos.length == 1 ? '' : 's'}. Check they match the description and are not stock images.', style: Theme.of(context).textTheme.bodySmall),
                 if (l.verification != 'verified')

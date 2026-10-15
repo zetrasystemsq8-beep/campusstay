@@ -2,7 +2,9 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/errors.dart';
+import 'amenity_catalog.dart';
 import 'landlord_models.dart';
+import 'property_extras.dart';
 
 abstract class LandlordRepository {
   Future<List<University>> universities();
@@ -39,7 +41,13 @@ String _mime(String ext) => switch (ext) {
 /// Development mode: everything is in memory. Nothing is uploaded or reviewed.
 class SampleLandlordRepository implements LandlordRepository {
   final _list = <LandlordListing>[];
-  final _unis = const [University('u1', 'Ekiti State University', 'EKSU'), University('u2', 'Federal University Oye-Ekiti', 'FUOYE')];
+  final _unis = const [
+    University('u1', 'Ekiti State University', 'EKSU', city: 'Ado-Ekiti', state: 'Ekiti'),
+    University('u2', 'Federal University Oye-Ekiti', 'FUOYE', city: 'Oye-Ekiti', state: 'Ekiti'),
+    University('u3', 'University of Lagos', 'UNILAG', city: 'Lagos', state: 'Lagos'),
+    University('u4', 'Yaba College of Technology', 'YABATECH', city: 'Yaba', state: 'Lagos', kind: 'polytechnic'),
+    University('u5', 'Federal College of Education, Abeokuta', 'FCEABEOKUTA', city: 'Abeokuta', state: 'Ogun', kind: 'college_of_education'),
+  ];
 
   LandlordListing _get(String id) => _list.firstWhere((l) => l.id == id);
 
@@ -58,15 +66,16 @@ class SampleLandlordRepository implements LandlordRepository {
 
   @override
   Future<String> saveDraft(String? id, ListingInput i) async {
-    final uni = _unis.firstWhere((u) => u.id == i.universityId);
+    final uni = _unis.where((u) => u.id == i.universityId).firstOrNull;
     if (id == null) {
       final l = LandlordListing(
         id: 'L${_list.length + 1}',
         title: i.title,
         description: i.description,
         area: i.area,
-        university: uni.shortName,
-        universityId: uni.id,
+        university: uni?.shortName ?? '',
+        universityId: uni?.id,
+        extras: i.extras,
         rentPeriod: i.rentPeriod,
         roomType: i.roomType,
         moderation: 'draft',
@@ -86,8 +95,9 @@ class SampleLandlordRepository implements LandlordRepository {
       ..title = i.title
       ..description = i.description
       ..area = i.area
-      ..university = uni.shortName
-      ..universityId = uni.id
+      ..university = uni?.shortName ?? ''
+      ..universityId = uni?.id
+      ..extras = i.extras
       ..rentPeriod = i.rentPeriod
       ..roomType = i.roomType
       ..rentNgn = i.rentNgn
@@ -147,7 +157,7 @@ class SupabaseLandlordRepository implements LandlordRepository {
   }
 
   static const _sel = 'id,title,description,area,rent_ngn,rent_period,room_type,distance_km,extra_fees_note,'
-      'moderation_status,availability_status,verification_level,expires_at,views_count,moderation_note,university_id,'
+      'moderation_status,availability_status,verification_level,expires_at,views_count,moderation_note,university_id,$kExtrasColumns,'
       'universities:cs_universities(short_name),property_photos:cs_property_photos(id,storage_path,sort_order),property_amenities:cs_property_amenities(amenities:cs_amenities(code))';
 
   String _url(String path) => _c.storage.from('cs-property-photos').getPublicUrl(path);
@@ -155,8 +165,11 @@ class SupabaseLandlordRepository implements LandlordRepository {
 
   @override
   Future<List<University>> universities() async {
-    final rows = await _c.from('cs_universities').select('id,name,short_name').order('name');
-    return rows.map<University>((r) => University(r['id'] as String, r['name'] as String, r['short_name'] as String)).toList();
+    final rows = await _c.from('cs_universities').select('id,name,short_name,city,state,kind').order('name').limit(2000);
+    return rows
+        .map<University>((r) => University(r['id'] as String, r['name'] as String, r['short_name'] as String,
+            city: (r['city'] ?? '') as String, state: (r['state'] ?? '') as String, kind: (r['kind'] ?? 'university') as String))
+        .toList();
   }
 
   @override
@@ -185,6 +198,7 @@ class SupabaseLandlordRepository implements LandlordRepository {
         'room_type': i.roomType,
         'distance_km': i.distanceKm,
         'extra_fees_note': i.extraFees,
+        ...i.extras.toMap(),
       };
 
   @override

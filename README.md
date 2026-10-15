@@ -30,6 +30,8 @@ Stage 3 (written, unverified): admin console (review queue, approve/reject/reque
 verification document review with short-lived signed links, landlord leads, audit log), block and report a person from a chat,
 typed error handling with specific friendly messages and timeouts everywhere, public landlord submission web page.
 
+Property features update: schools (272 institutions in all 36 states and the FCT, with a searchable picker and "my school isn't listed"), a 7-step add-property flow with bedrooms, bathrooms, kitchen, furnishing, who it suits, availability, costs and instalments, house rules and 30 grouped facilities, and student filters for school, bedrooms, furnishing, gender and facilities. Run `0006_property_features.sql` then `0007_schools_nigeria.sql`. The school list was written from general knowledge, so spot-check it; fix or add schools with SQL on `cs_universities`.
+
 All CampusStay database objects, buckets and functions are prefixed `cs_` / `cs-` so they can share a Supabase project with other apps. Run `supabase/all_in_one.sql` once (or the four migrations in order).
 
 ## Public landlord page

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'admin_models.dart';
 import 'landlord_models.dart';
+import 'property_extras.dart';
 
 /// Every method here is also enforced by Row Level Security or admin-only
 /// database functions. Hiding a button is never the only protection.
@@ -51,7 +52,7 @@ class SupabaseAdminRepository implements AdminRepository {
   SupabaseClient get _c => Supabase.instance.client;
 
   static const _sel = 'id,owner_id,title,description,area,rent_ngn,rent_period,room_type,distance_km,extra_fees_note,'
-      'moderation_status,availability_status,verification_level,expires_at,views_count,moderation_note,university_id,'
+      'moderation_status,availability_status,verification_level,expires_at,views_count,moderation_note,university_id,$kExtrasColumns,'
       'universities:cs_universities(short_name),property_photos:cs_property_photos(id,storage_path,sort_order),property_amenities:cs_property_amenities(amenities:cs_amenities(code))';
 
   @override

@@ -11,7 +11,7 @@ class SupabaseRepository implements Repository {
   }
 
   static const _sel =
-      'id,title,description,area,rent_ngn,rent_period,room_type,distance_km,verification_level,extra_fees_note,'
+      'id,title,description,area,rent_ngn,rent_period,room_type,distance_km,verification_level,extra_fees_note,$kExtrasColumns,'
       'universities:cs_universities(short_name),property_photos:cs_property_photos(storage_path,sort_order),property_amenities:cs_property_amenities(amenities:cs_amenities(code))';
 
   String _photo(String path) => _c.storage.from('cs-property-photos').getPublicUrl(path);
@@ -24,6 +24,11 @@ class SupabaseRepository implements Repository {
     if (f.minRent != null) q = q.gte('rent_ngn', f.minRent!);
     if (f.maxRent != null) q = q.lte('rent_ngn', f.maxRent!);
     if (f.roomType != null) q = q.eq('room_type', f.roomType!);
+    if (f.universityId != null) q = q.eq('university_id', f.universityId!);
+    if (f.furnishing != null) q = q.eq('furnishing', f.furnishing!);
+    if (f.minBedrooms != null) q = q.gte('bedrooms', f.minBedrooms!);
+    if (f.forGender != null) q = q.inFilter('gender_preference', ['any', '${f.forGender}_only']);
+    if (f.amenities.isNotEmpty) q = q.contains('amenity_codes', f.amenities.toList());
     final text = f.query.trim().replaceAll(RegExp(r'[%_,()]'), ' ');
     if (text.isNotEmpty) q = q.or('title.ilike.%$text%,area.ilike.%$text%');
     final from = page * Repository.pageSize;

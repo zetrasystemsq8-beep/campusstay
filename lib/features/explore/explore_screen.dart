@@ -3,6 +3,7 @@ import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/property_widgets.dart';
+import '../../core/widgets/school_picker.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/favourites_store.dart';
 import '../../data/models.dart';
@@ -118,6 +119,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             const SizedBox(width: 8),
             Badge(
               isLabelVisible: _filter.isActive,
+              label: Text('${_filter.activeCount}'),
               child: IconButton.filledTonal(onPressed: _openFilters, tooltip: 'Filters', icon: const Icon(Icons.tune)),
             ),
           ]),
@@ -179,40 +181,99 @@ class _FilterSheet extends StatefulWidget {
 class _FilterSheetState extends State<_FilterSheet> {
   late RangeValues _range = RangeValues((widget.initial.minRent ?? 0).toDouble(), (widget.initial.maxRent ?? 500000).toDouble());
   late String? _room = widget.initial.roomType;
+  late String? _schoolId = widget.initial.universityId;
+  late String? _schoolName = widget.initial.schoolName;
+  late String? _furnishing = widget.initial.furnishing;
+  late String? _gender = widget.initial.forGender;
+  late int? _beds = widget.initial.minBedrooms;
+  late final Set<String> _amen = {...widget.initial.amenities};
+
+  Future<void> _pickSchool() async {
+    final r = await pickSchool(context, allowClear: true);
+    if (r == null) return;
+    setState(() {
+      _schoolId = r.school?.id;
+      _schoolName = r.school?.shortName;
+    });
+  }
+
+  Widget _h(String t) => Padding(padding: const EdgeInsets.only(top: 18, bottom: 8), child: Text(t, style: Theme.of(context).textTheme.titleMedium));
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(CS.s24, CS.s24, CS.s24, CS.s24 + MediaQuery.of(context).viewInsets.bottom),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text('Filters', style: Theme.of(context).textTheme.titleLarge)),
-            TextButton(onPressed: () => Navigator.pop(context, SearchFilter(query: widget.initial.query)), child: const Text('Reset')),
-          ]),
-          const SizedBox(height: 12),
-          Text('Rent range', style: Theme.of(context).textTheme.titleMedium),
-          Text('₦${formatNaira(_range.start.round())} – ₦${formatNaira(_range.end.round())}${_range.end >= 500000 ? '+' : ''}',
-              style: Theme.of(context).textTheme.bodySmall),
-          RangeSlider(values: _range, min: 0, max: 500000, divisions: 50, onChanged: (v) => setState(() => _range = v)),
-          const SizedBox(height: 8),
-          Text('Room type', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final e in roomTypeLabels.entries)
-              ChoiceChip(label: Text(e.value), selected: _room == e.key, onSelected: (s) => setState(() => _room = s ? e.key : null)),
-          ]),
-          const SizedBox(height: 24),
-          PrimaryButton(
-            label: 'Apply filters',
-            onPressed: () => Navigator.pop(
-              context,
-              SearchFilter(
-                query: widget.initial.query,
-                minRent: _range.start > 0 ? _range.start.round() : null,
-                maxRent: _range.end < 500000 ? _range.end.round() : null,
-                roomType: _room,
+  Widget build(BuildContext context) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(CS.s24, CS.s16, CS.s24, CS.s16 + MediaQuery.of(context).viewInsets.bottom),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text('Filters', style: Theme.of(context).textTheme.titleLarge)),
+              TextButton(onPressed: () => Navigator.pop(context, SearchFilter(query: widget.initial.query)), child: const Text('Reset')),
+            ]),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  _h('School'),
+                  OutlinedButton.icon(
+                    onPressed: _pickSchool,
+                    icon: const Icon(Icons.school_outlined),
+                    label: Text(_schoolName ?? 'Any school'),
+                  ),
+                  _h('Rent range'),
+                  Text('₦${formatNaira(_range.start.round())} – ₦${formatNaira(_range.end.round())}${_range.end >= 500000 ? '+' : ''}', style: Theme.of(context).textTheme.bodySmall),
+                  RangeSlider(values: _range, min: 0, max: 500000, divisions: 50, onChanged: (v) => setState(() => _range = v)),
+                  _h('Room type'),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final e in roomTypeLabels.entries) ChoiceChip(label: Text(e.value), selected: _room == e.key, onSelected: (s) => setState(() => _room = s ? e.key : null)),
+                  ]),
+                  _h('Bedrooms'),
+                  Wrap(spacing: 8, children: [
+                    ChoiceChip(label: const Text('Any'), selected: _beds == null, onSelected: (_) => setState(() => _beds = null)),
+                    for (final n in [1, 2, 3, 4]) ChoiceChip(label: Text('$n+'), selected: _beds == n, onSelected: (_) => setState(() => _beds = n)),
+                  ]),
+                  _h('Furnishing'),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final e in furnishingLabels.entries) ChoiceChip(label: Text(e.value), selected: _furnishing == e.key, onSelected: (s) => setState(() => _furnishing = s ? e.key : null)),
+                  ]),
+                  _h('Suitable for'),
+                  Wrap(spacing: 8, children: [
+                    ChoiceChip(label: const Text('Anyone'), selected: _gender == null, onSelected: (_) => setState(() => _gender = null)),
+                    ChoiceChip(label: const Text('Male student'), selected: _gender == 'male', onSelected: (s) => setState(() => _gender = s ? 'male' : null)),
+                    ChoiceChip(label: const Text('Female student'), selected: _gender == 'female', onSelected: (s) => setState(() => _gender = s ? 'female' : null)),
+                  ]),
+                  _h('Must have'),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final a in amenityCatalog)
+                      FilterChip(
+                        label: Text(a.label),
+                        selected: _amen.contains(a.code),
+                        showCheckmark: false,
+                        selectedColor: CS.blue,
+                        labelStyle: TextStyle(color: _amen.contains(a.code) ? Colors.white : CS.ink, fontWeight: FontWeight.w600),
+                        onSelected: (v) => setState(() => v ? _amen.add(a.code) : _amen.remove(a.code)),
+                      ),
+                  ]),
+                ]),
               ),
             ),
-          ),
-        ]),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'Show results',
+              onPressed: () => Navigator.pop(
+                context,
+                SearchFilter(
+                  query: widget.initial.query,
+                  minRent: _range.start > 0 ? _range.start.round() : null,
+                  maxRent: _range.end < 500000 ? _range.end.round() : null,
+                  roomType: _room,
+                  universityId: _schoolId,
+                  schoolName: _schoolName,
+                  furnishing: _furnishing,
+                  forGender: _gender,
+                  minBedrooms: _beds,
+                  amenities: _amen,
+                ),
+              ),
+            ),
+          ]),
+        ),
       );
 }

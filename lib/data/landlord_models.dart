@@ -1,8 +1,12 @@
 import 'models.dart';
+import 'property_extras.dart';
 
 class University {
-  final String id, name, shortName;
-  const University(this.id, this.name, this.shortName);
+  final String id, name, shortName, city, state, kind;
+  const University(this.id, this.name, this.shortName, {this.city = '', this.state = '', this.kind = 'university'});
+
+  String get kindLabel => const {'university': 'University', 'polytechnic': 'Polytechnic', 'college_of_education': 'College of Education'}[kind] ?? 'School';
+  String get where => [city, state].where((e) => e.isNotEmpty).join(', ');
 }
 
 class PhotoRef {
@@ -12,7 +16,9 @@ class PhotoRef {
 }
 
 class ListingInput {
-  final String title, description, area, rentPeriod, roomType, universityId;
+  final String title, description, area, rentPeriod, roomType;
+  final String? universityId; // null when the school is not on the list (see extras.schoolOther)
+  final PropertyExtras extras;
   final int rentNgn;
   final double? distanceKm;
   final String? extraFees;
@@ -23,13 +29,12 @@ class ListingInput {
     required this.rentPeriod,
     required this.roomType,
     required this.universityId,
+    this.extras = const PropertyExtras(),
     required this.rentNgn,
     this.distanceKm,
     this.extraFees,
   });
 }
-
-const amenityIds = {'wifi': 1, 'water': 2, 'electricity': 3, 'parking': 4, 'cctv': 5, 'kitchen': 6, 'laundry': 7, 'ac': 8};
 
 class LandlordListing {
   String id, title, description, area, university, rentPeriod, roomType, moderation, availability, verification;
@@ -39,6 +44,7 @@ class LandlordListing {
   DateTime? expiresAt;
   List<PhotoRef> photos;
   List<String> amenities;
+  PropertyExtras extras;
 
   LandlordListing({
     required this.id,
@@ -61,6 +67,7 @@ class LandlordListing {
     this.expiresAt,
     this.photos = const [],
     this.amenities = const [],
+    this.extras = const PropertyExtras(),
   });
 
   factory LandlordListing.fromMap(Map<String, dynamic> m, String Function(String) photoUrl) {
@@ -85,6 +92,7 @@ class LandlordListing {
       expiresAt: m['expires_at'] == null ? null : DateTime.parse(m['expires_at'] as String).toLocal(),
       views: (m['views_count'] as num?)?.toInt() ?? 0,
       moderationNote: m['moderation_note'] as String?,
+      extras: PropertyExtras.fromMap(m),
       ownerId: m['owner_id'] as String?,
       photos: photos.map((p) => PhotoRef(p['id'] as String, p['storage_path'] as String, photoUrl(p['storage_path'] as String))).toList(),
       amenities: ((m['property_amenities'] as List?) ?? [])
@@ -94,6 +102,8 @@ class LandlordListing {
           .toList(),
     );
   }
+
+  String get school => university.isNotEmpty ? university : extras.schoolOther;
 
   bool get isExpired => moderation == 'approved' && expiresAt != null && expiresAt!.isBefore(DateTime.now());
   bool get isActive => moderation == 'approved' && availability == 'available' && !isExpired;
