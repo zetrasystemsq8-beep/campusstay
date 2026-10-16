@@ -32,6 +32,8 @@ typed error handling with specific friendly messages and timeouts everywhere, pu
 
 Property features update: schools (272 institutions in all 36 states and the FCT, with a searchable picker and "my school isn't listed"), a 7-step add-property flow with bedrooms, bathrooms, kitchen, furnishing, who it suits, availability, costs and instalments, house rules and 30 grouped facilities, and student filters for school, bedrooms, furnishing, gender and facilities. Run `0006_property_features.sql` then `0007_schools_nigeria.sql`. The school list was written from general knowledge, so spot-check it; fix or add schools with SQL on `cs_universities`.
 
+Map and contact update: landlords pin the property on a map (step 2 of Add Property). Students see an approximate ~500 m area; the exact pin and address are released by the database only to the owner, admins, and a student whose viewing the landlord has confirmed. A map view shows listings as price pins. Landlords choose who can see their phone (hidden, after a student messages them, or everyone signed in); the server decides, the number is fetched only when a student taps Call or WhatsApp, and each reveal is rate limited and logged. Run `0008_location_contact.sql`. Maps use OpenStreetMap's public tiles by default, which suit testing only; before real traffic, set the optional `MAP_TILE_URL` and `MAP_ATTRIBUTION` secrets to a tile provider you have an account with.
+
 All CampusStay database objects, buckets and functions are prefixed `cs_` / `cs-` so they can share a Supabase project with other apps. Run `supabase/all_in_one.sql` once (or the four migrations in order).
 
 ## Public landlord page

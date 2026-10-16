@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:campusstay/core/errors.dart';
 
 void main() {
+  locationTests();
   test('network failures are classified specifically', () {
     expect(classify(const SocketException('Failed host lookup')).kind, AppErrorKind.offline);
     expect(classify(TimeoutException('slow')).kind, AppErrorKind.timeout);
@@ -39,5 +40,14 @@ void main() {
         throwsA(isA<AppException>().having((e) => e.kind, 'kind', AppErrorKind.timeout)));
     await expectLater(Net.run<void>(() async => throw const SocketException('x')),
         throwsA(isA<AppException>().having((e) => e.kind, 'kind', AppErrorKind.offline)));
+  });
+}
+
+void locationTests() {
+  test('every error kind has its own wording and none is empty', () {
+    for (final k in AppErrorKind.values) {
+      final i = describe(AppException(k));
+      expect(i.title.isNotEmpty && i.message.isNotEmpty, true, reason: k.name);
+    }
   });
 }

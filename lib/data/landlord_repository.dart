@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/errors.dart';
 import 'amenity_catalog.dart';
 import 'landlord_models.dart';
+import 'location_models.dart';
 import 'property_extras.dart';
 
 abstract class LandlordRepository {
@@ -22,6 +23,9 @@ abstract class LandlordRepository {
   Future<void> delete(String id);
   Future<List<ViewingRequestItem>> viewingRequests();
   Future<void> decideViewing(String id, String status);
+  Future<ExactLocation?> myLocation(String propertyId);
+  Future<void> saveLocation(String propertyId, double lat, double lng, String addressLine);
+  Future<void> clearLocation(String propertyId);
 }
 
 String _rid() => DateTime.now().microsecondsSinceEpoch.toRadixString(36) + Random().nextInt(1 << 30).toRadixString(36);
@@ -146,6 +150,15 @@ class SampleLandlordRepository implements LandlordRepository {
 
   @override
   Future<void> decideViewing(String id, String status) async {}
+
+  final _locations = <String, ExactLocation>{};
+
+  @override
+  Future<ExactLocation?> myLocation(String propertyId) async => _locations[propertyId];
+  @override
+  Future<void> saveLocation(String propertyId, double lat, double lng, String addressLine) async => _locations[propertyId] = ExactLocation(lat, lng, addressLine);
+  @override
+  Future<void> clearLocation(String propertyId) async => _locations.remove(propertyId);
 }
 
 class SupabaseLandlordRepository implements LandlordRepository {
@@ -287,5 +300,28 @@ class SupabaseLandlordRepository implements LandlordRepository {
   @override
   Future<void> decideViewing(String id, String status) async {
     await _c.from('cs_viewing_requests').update({'status': status}).eq('id', id);
+  }
+
+  @override
+  Future<ExactLocation?> myLocation(String propertyId) async {
+    final r = await _c.from('cs_property_locations').select('lat,lng,address_line').eq('property_id', propertyId).maybeSingle();
+    if (r == null) return null;
+    return ExactLocation((r['lat'] as num).toDouble(), (r['lng'] as num).toDouble(), (r['address_line'] ?? '') as String);
+  }
+
+  @override
+  Future<void> saveLocation(String propertyId, double lat, double lng, String addressLine) async {
+    await _c.from('cs_property_locations').upsert({
+      'property_id': propertyId,
+      'lat': lat,
+      'lng': lng,
+      'address_line': addressLine.isEmpty ? null : addressLine,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> clearLocation(String propertyId) async {
+    await _c.from('cs_property_locations').delete().eq('property_id', propertyId);
   }
 }

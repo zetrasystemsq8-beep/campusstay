@@ -19,6 +19,7 @@ class Property {
   final List<String> photoUrls;
   final String? extraFeesNote;
   final PropertyExtras extras;
+  final double? approxLat, approxLng;
 
   const Property({
     required this.id,
@@ -35,6 +36,8 @@ class Property {
     this.photoUrls = const [],
     this.extraFeesNote,
     this.extras = const PropertyExtras(),
+    this.approxLat,
+    this.approxLng,
   });
 
   /// [photoBase] turns a storage path into a public URL.
@@ -64,6 +67,8 @@ class Property {
       photoUrls: photos.map((p) => photoBase(p['storage_path'] as String)).toList(),
       extraFeesNote: m['extra_fees_note'] as String?,
       extras: PropertyExtras.fromMap(m),
+      approxLat: (m['approx_lat'] as num?)?.toDouble(),
+      approxLng: (m['approx_lng'] as num?)?.toDouble(),
     );
   }
 

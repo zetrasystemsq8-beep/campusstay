@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'map_screen.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
@@ -115,6 +116,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 },
                 decoration: const InputDecoration(hintText: 'Search school, town or area', prefixIcon: Icon(Icons.search)),
               ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MapExploreScreen(filter: _filter))),
+              tooltip: 'Map view',
+              icon: const Icon(Icons.map_outlined),
             ),
             const SizedBox(width: 8),
             Badge(

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'location_models.dart';
 import 'models.dart';
 import 'repository.dart';
 
@@ -11,15 +12,14 @@ class SupabaseRepository implements Repository {
   }
 
   static const _sel =
-      'id,title,description,area,rent_ngn,rent_period,room_type,distance_km,verification_level,extra_fees_note,$kExtrasColumns,'
+      'id,title,description,area,rent_ngn,rent_period,room_type,distance_km,verification_level,extra_fees_note,$kExtrasColumns,approx_lat,approx_lng,'
       'universities:cs_universities(short_name),property_photos:cs_property_photos(storage_path,sort_order),property_amenities:cs_property_amenities(amenities:cs_amenities(code))';
 
   String _photo(String path) => _c.storage.from('cs-property-photos').getPublicUrl(path);
   Property _p(Map<String, dynamic> m) => Property.fromMap(m, _photo);
 
-  @override
-  Future<List<Property>> search(SearchFilter f, {int page = 0}) async {
-    // RLS already limits rows to approved, available, unexpired listings.
+  /// Shared by list search and map search. RLS already limits rows to approved, available, unexpired listings.
+  PostgrestFilterBuilder<PostgrestList> _filtered(SearchFilter f) {
     var q = _c.from('cs_properties').select(_sel);
     if (f.minRent != null) q = q.gte('rent_ngn', f.minRent!);
     if (f.maxRent != null) q = q.lte('rent_ngn', f.maxRent!);
@@ -31,12 +31,35 @@ class SupabaseRepository implements Repository {
     if (f.amenities.isNotEmpty) q = q.contains('amenity_codes', f.amenities.toList());
     final text = f.query.trim().replaceAll(RegExp(r'[%_,()]'), ' ');
     if (text.isNotEmpty) q = q.or('title.ilike.%$text%,area.ilike.%$text%');
+    return q;
+  }
+
+  @override
+  Future<List<Property>> search(SearchFilter f, {int page = 0}) async {
     final from = page * Repository.pageSize;
-    final rows = await q
-        .order('created_at', ascending: false)
-        .range(from, from + Repository.pageSize - 1);
+    final rows = await _filtered(f).order('created_at', ascending: false).range(from, from + Repository.pageSize - 1);
     return rows.map<Property>((r) => _p(r)).toList();
   }
+
+  @override
+  Future<List<Property>> mapListings(SearchFilter f, {required double south, required double west, required double north, required double east}) async {
+    final rows = await _filtered(f).gte('approx_lat', south).lte('approx_lat', north).gte('approx_lng', west).lte('approx_lng', east).limit(100);
+    return rows.map<Property>((r) => _p(r)).toList();
+  }
+
+  @override
+  Future<ExactLocation?> exactLocation(String propertyId) async {
+    // RLS returns a row only to the owner, admins, and students whose viewing was confirmed.
+    final r = await _c.from('cs_property_locations').select('lat,lng,address_line').eq('property_id', propertyId).maybeSingle();
+    if (r == null) return null;
+    return ExactLocation((r['lat'] as num).toDouble(), (r['lng'] as num).toDouble(), (r['address_line'] ?? '') as String);
+  }
+
+  @override
+  Future<String> contactStatus(String propertyId) async => (await _c.rpc('cs_contact_status', params: {'p_property_id': propertyId})) as String;
+
+  @override
+  Future<String> revealPhone(String propertyId) async => (await _c.rpc('cs_reveal_contact', params: {'p_property_id': propertyId})) as String;
 
   @override
   Future<Property> property(String id) async {

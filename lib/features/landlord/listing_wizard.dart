@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/errors.dart';
 import '../../core/format.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/widgets/landlord_theme.dart';
+import '../../core/widgets/map_widgets.dart';
 import '../../core/widgets/property_details_widgets.dart';
 import '../../core/widgets/school_picker.dart';
 import '../../core/widgets/state_views.dart';
@@ -29,7 +31,7 @@ class ListingWizard extends StatefulWidget {
 }
 
 class _ListingWizardState extends State<ListingWizard> {
-  static const _titles = ['Basics', 'Space', 'Costs', 'Features', 'Photos', 'Verification', 'Review'];
+  static const _titles = ['Basics', 'Location', 'Space', 'Costs', 'Features', 'Photos', 'Verification', 'Review'];
   static const _maxPhotos = 10;
   static const _docTypes = [
     ('id_card', 'ID card', "NIN slip, driver's licence or passport"),
@@ -51,8 +53,11 @@ class _ListingWizardState extends State<ListingWizard> {
   final _lease = TextEditingController();
   final _rules = TextEditingController();
   final _desc = TextEditingController();
+  final _address = TextEditingController();
   final _picker = ImagePicker();
 
+  LatLng? _pin;
+  bool _hadLocation = false;
   String? _universityId;
   String _schoolLabel = '';
   String _schoolOther = '';
@@ -109,11 +114,26 @@ class _ListingWizardState extends State<ListingWizard> {
     _pets = x.petsAllowed;
     _photos.addAll(e.photos.map((p) => _Photo(p)));
     _amen.addAll(e.amenities);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadLocation());
+  }
+
+  Future<void> _loadLocation() async {
+    try {
+      final l = await Services.landlord.myLocation(_id!);
+      if (!mounted || l == null) return;
+      setState(() {
+        _pin = LatLng(l.lat, l.lng);
+        _address.text = l.addressLine;
+        _hadLocation = true;
+      });
+    } catch (e) {
+      if (mounted) showError(context, e, onRetry: _loadLocation);
+    }
   }
 
   @override
   void dispose() {
-    for (final c in [_title, _area, _landmark, _distance, _rent, _caution, _service, _fees, _lease, _rules, _desc]) {
+    for (final c in [_title, _area, _landmark, _distance, _rent, _caution, _service, _fees, _lease, _rules, _desc, _address]) {
       c.dispose();
     }
     super.dispose();
@@ -169,27 +189,36 @@ class _ListingWizardState extends State<ListingWizard> {
           _id = await r.saveDraft(_id, _input());
           break;
         case 1:
-          _id = await r.saveDraft(_id, _input());
+          if (_pin != null) {
+            await r.saveLocation(_id!, _pin!.latitude, _pin!.longitude, _address.text.trim());
+            _hadLocation = true;
+          } else if (_hadLocation) {
+            await r.clearLocation(_id!);
+            _hadLocation = false;
+          }
           break;
         case 2:
-          if (!_formCosts.currentState!.validate()) return;
           _id = await r.saveDraft(_id, _input());
           break;
         case 3:
+          if (!_formCosts.currentState!.validate()) return;
+          _id = await r.saveDraft(_id, _input());
+          break;
+        case 4:
           if (!_formFeatures.currentState!.validate()) return;
           _id = await r.saveDraft(_id, _input());
           await r.setAmenities(_id!, _amen.toList());
           break;
-        case 4:
+        case 5:
           if (_photos.isEmpty) {
             showMessage(context, 'Add at least one photo of the property.', error: true);
             return;
           }
           break;
-        case 5:
+        case 6:
           _status = (await r.myListing(_id!)).moderation;
           break;
-        case 6:
+        case 7:
           await _finish();
           return;
       }
@@ -337,7 +366,7 @@ class _ListingWizardState extends State<ListingWizard> {
                     ),
                   Expanded(
                     child: PrimaryButton(
-                      label: _step == 6 ? (_canSubmit ? 'Submit for review' : 'Save changes') : 'Next',
+                      label: _step == 7 ? (_canSubmit ? 'Submit for review' : 'Save changes') : 'Next',
                       color: CS.green,
                       loading: _busy,
                       onPressed: _next,
@@ -352,11 +381,12 @@ class _ListingWizardState extends State<ListingWizard> {
 
   Widget _body() => switch (_step) {
         0 => _basics(),
-        1 => _space(),
-        2 => _costs(),
-        3 => _features(),
-        4 => _photosStep(),
-        5 => _verification(),
+        1 => _locationStep(),
+        2 => _space(),
+        3 => _costs(),
+        4 => _features(),
+        5 => _photosStep(),
+        6 => _verification(),
         _ => _review(),
       };
 
@@ -491,7 +521,22 @@ class _ListingWizardState extends State<ListingWizard> {
         ]),
       );
 
-  // Step 2
+  // Step 2: location
+  Widget _locationStep() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Pin where the property is. Students only see an approximate area on the map. The exact spot and address are shared with a student only after you confirm their viewing.', style: TextStyle(color: CS.muted)),
+        const SizedBox(height: 12),
+        LocationPicker(initial: _pin, onChanged: (p) => setState(() => _pin = p)),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _address,
+          maxLength: 200,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(labelText: 'House number and street (optional)', helperText: 'Private. Shared only after you confirm a viewing.'),
+        ),
+        const Text('You can skip this step, but listings with a pin get more enquiries.', style: TextStyle(fontSize: 13, color: CS.muted)),
+      ]);
+
+  // Step 3
   Widget _space() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _counter('Bedrooms', _bedrooms, 0, 20, (v) => _bedrooms = v, hint: '0 means a bed space or a single shared room'),
         _counter('Bathrooms', _bathrooms, 0, 20, (v) => _bathrooms = v),
@@ -704,6 +749,8 @@ class _ListingWizardState extends State<ListingWizard> {
           const SizedBox(height: 12),
           FacilitiesByCategory(codes: _amen.toList()),
           const SizedBox(height: 12),
+          Text(_pin == null ? 'No map pin yet' : 'Map pin set', style: TextStyle(color: _pin == null ? CS.warn : CS.green, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
           Text('${_photos.length} photo${_photos.length == 1 ? '' : 's'}  ·  ${_docs.values.where((v) => v).length} document${_docs.values.where((v) => v).length == 1 ? '' : 's'} uploaded'),
         ]),
       ),

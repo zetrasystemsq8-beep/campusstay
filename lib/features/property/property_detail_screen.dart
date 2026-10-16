@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
@@ -7,7 +8,10 @@ import '../../core/widgets/state_views.dart';
 import '../../data/favourites_store.dart';
 import '../../data/models.dart';
 import '../../data/analytics.dart';
+import '../../core/launch.dart';
+import '../../core/widgets/map_widgets.dart';
 import '../../core/widgets/property_details_widgets.dart';
+import '../../data/location_models.dart';
 import '../../data/repository.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
@@ -162,6 +166,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       const SizedBox(height: 6),
                       Text(p.description.isEmpty ? 'No description provided.' : p.description, style: Theme.of(context).textTheme.bodyLarge),
                       const SizedBox(height: 20),
+                      _LocationSection(property: p),
+                      const SizedBox(height: 20),
                       Text('Costs', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       CostsCard(rentLabel: p.rentLabel, rentNgn: p.rentNgn, extras: p.extras, otherFees: p.extraFeesNote),
@@ -169,6 +175,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       Text('House rules', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       RulesCard(extras: p.extras),
+                      const SizedBox(height: 20),
+                      _ContactSection(propertyId: p.id),
                       const SizedBox(height: 16),
                       TextButton.icon(onPressed: () => _report(p), icon: const Icon(Icons.flag_outlined, size: 18), label: const Text('Report this listing')),
                     ]),
@@ -212,4 +220,118 @@ Future<String?> _askText(BuildContext context, {required String title, required 
       ],
     ),
   );
+}
+
+
+/// Approximate area for everyone; exact pin and address only once the landlord has confirmed your viewing.
+class _LocationSection extends StatefulWidget {
+  final Property property;
+  const _LocationSection({required this.property});
+  @override
+  State<_LocationSection> createState() => _LocationSectionState();
+}
+
+class _LocationSectionState extends State<_LocationSection> {
+  late Future<ExactLocation?> _f = Services.repo.exactLocation(widget.property.id);
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.property;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Location', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      FutureBuilder<ExactLocation?>(
+        future: _f,
+        builder: (c, s) {
+          if (s.connectionState != ConnectionState.done) return Container(height: 220, decoration: BoxDecoration(color: CS.surface, borderRadius: BorderRadius.circular(CS.rMd)));
+          if (s.hasError) {
+            return Row(children: [
+              const Expanded(child: Text('Could not load the map.', style: TextStyle(color: CS.muted))),
+              TextButton(onPressed: () => setState(() => _f = Services.repo.exactLocation(p.id)), child: const Text('Try again')),
+            ]);
+          }
+          final exact = s.data;
+          if (exact != null) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              ListingMap(center: LatLng(exact.lat, exact.lng), exact: true),
+              if (exact.addressLine.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(exact.addressLine, style: const TextStyle(fontWeight: FontWeight.w700))),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(onPressed: () => openExternal(context, mapsUri(exact.lat, exact.lng)), icon: const Icon(Icons.directions_outlined), label: const Text('Get directions')),
+            ]);
+          }
+          if (p.approxLat != null && p.approxLng != null) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              ListingMap(center: LatLng(p.approxLat!, p.approxLng!), exact: false),
+              const SizedBox(height: 8),
+              const Text('This is the approximate area. The landlord shares the exact address once your viewing is confirmed.', style: TextStyle(color: CS.muted, fontSize: 12.5)),
+              TextButton.icon(onPressed: () => openExternal(context, mapsUri(p.approxLat!, p.approxLng!)), icon: const Icon(Icons.open_in_new, size: 16), label: const Text('Open area in Maps')),
+            ]);
+          }
+          return const Text('The landlord has not pinned the location yet.', style: TextStyle(color: CS.muted));
+        },
+      ),
+    ]);
+  }
+}
+
+/// Call or WhatsApp, only when the landlord's own setting allows it. The server decides; the number
+/// is fetched only when you tap, and every reveal is rate-limited and logged.
+class _ContactSection extends StatefulWidget {
+  final String propertyId;
+  const _ContactSection({required this.propertyId});
+  @override
+  State<_ContactSection> createState() => _ContactSectionState();
+}
+
+class _ContactSectionState extends State<_ContactSection> {
+  late Future<String> _f = Services.repo.contactStatus(widget.propertyId);
+  bool _busy = false;
+
+  Future<void> _reach(bool whatsapp) async {
+    setState(() => _busy = true);
+    try {
+      final phone = await Services.repo.revealPhone(widget.propertyId);
+      if (!mounted) return;
+      final uri = whatsapp
+          ? Uri.parse('https://wa.me/${toInternationalPhone(phone)}?text=${Uri.encodeComponent('Hello, I saw your listing on CampusStay and I am interested.')}')
+          : Uri(scheme: 'tel', path: phone);
+      await openExternal(context, uri);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<String>(
+        future: _f,
+        builder: (c, s) {
+          if (!s.hasData) return const SizedBox.shrink(); // contact is optional, so never block the page on it
+          switch (s.data) {
+            case ContactStatus.available:
+              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Contact the landlord', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Expanded(child: OutlinedButton.icon(onPressed: _busy ? null : () => _reach(false), icon: const Icon(Icons.call_outlined), label: const Text('Call'))),
+                  const SizedBox(width: 10),
+                  Expanded(child: OutlinedButton.icon(onPressed: _busy ? null : () => _reach(true), icon: const Icon(Icons.chat_outlined), label: const Text('WhatsApp'))),
+                ]),
+              ]);
+            case ContactStatus.locked:
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: CS.blueSoft, borderRadius: BorderRadius.circular(CS.rMd)),
+                child: const Row(children: [
+                  Icon(Icons.lock_outline, color: CS.blue),
+                  SizedBox(width: 10),
+                  Expanded(child: Text("The landlord's phone number unlocks after you send them a message or they confirm your viewing.")),
+                ]),
+              );
+            default:
+              return const SizedBox.shrink();
+          }
+        },
+      );
 }

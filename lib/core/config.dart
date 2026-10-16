@@ -10,6 +10,11 @@ class AppConfig {
   static const termsUrl = String.fromEnvironment('TERMS_URL');
   static const privacyUrl = String.fromEnvironment('PRIVACY_URL');
 
+  /// Map tiles. The default is OpenStreetMap's public server, which is fine for testing but
+  /// not for heavy use. Set MAP_TILE_URL (and MAP_ATTRIBUTION) to a tile provider you have an account with.
+  static const mapTileUrl = String.fromEnvironment('MAP_TILE_URL', defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+  static const mapAttribution = String.fromEnvironment('MAP_ATTRIBUTION', defaultValue: '© OpenStreetMap contributors');
+
   /// Development mode: no Supabase configured, sample data only.
   static bool get devMode => supabaseUrl.isEmpty || supabaseAnonKey.isEmpty;
 }

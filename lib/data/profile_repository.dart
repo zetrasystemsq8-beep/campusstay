@@ -5,7 +5,7 @@ import 'profile_models.dart';
 
 abstract class ProfileRepository {
   Future<ProfileData> load();
-  Future<void> save(String fullName, String phone);
+  Future<void> save(String fullName, String phone, String phoneVisibility);
   Future<void> changePassword(String current, String next);
   Future<List<AppNotification>> notifications();
   Future<void> markRead(String id);
@@ -18,15 +18,17 @@ abstract class ProfileRepository {
 class SampleProfileRepository implements ProfileRepository {
   String _name = '';
   String _phone = '';
+  String _visibility = 'hidden';
 
   @override
   Future<ProfileData> load() async =>
-      ProfileData(id: 'demo', email: AuthService.email, role: await AuthService.role(), fullName: _name, phone: _phone.isEmpty ? null : _phone);
+      ProfileData(id: 'demo', email: AuthService.email, role: await AuthService.role(), fullName: _name, phone: _phone.isEmpty ? null : _phone, phoneVisibility: _visibility);
 
   @override
-  Future<void> save(String fullName, String phone) async {
+  Future<void> save(String fullName, String phone, String phoneVisibility) async {
     _name = fullName;
     _phone = phone;
+    _visibility = phoneVisibility;
   }
 
   @override
@@ -56,21 +58,22 @@ class SupabaseProfileRepository implements ProfileRepository {
   @override
   Future<ProfileData> load() async {
     final u = _user;
-    final r = await _c.from('cs_profiles').select('full_name,phone,role,is_suspended').eq('id', u.id).single();
+    final r = await _c.from('cs_profiles').select('full_name,phone,phone_visibility,role,is_suspended').eq('id', u.id).single();
     return ProfileData(
       id: u.id,
       email: u.email ?? '',
       role: r['role'] as String,
       fullName: r['full_name'] as String?,
       phone: r['phone'] as String?,
+      phoneVisibility: (r['phone_visibility'] ?? 'hidden') as String,
       suspended: r['is_suspended'] as bool? ?? false,
     );
   }
 
   @override
-  Future<void> save(String fullName, String phone) async {
+  Future<void> save(String fullName, String phone, String phoneVisibility) async {
     // .single() makes a missing or blocked row an error instead of a silent no-op.
-    await _c.from('cs_profiles').update({'full_name': fullName, 'phone': phone.isEmpty ? null : phone}).eq('id', _user.id).select('id').single();
+    await _c.from('cs_profiles').update({'full_name': fullName, 'phone': phone.isEmpty ? null : phone, 'phone_visibility': phone.isEmpty ? 'hidden' : phoneVisibility}).eq('id', _user.id).select('id').single();
   }
 
   @override
@@ -119,7 +122,7 @@ class GuardedProfileRepository implements ProfileRepository {
   @override
   Future<ProfileData> load() => Net.run(() => _r.load());
   @override
-  Future<void> save(String fullName, String phone) => Net.run(() => _r.save(fullName, phone));
+  Future<void> save(String fullName, String phone, String phoneVisibility) => Net.run(() => _r.save(fullName, phone, phoneVisibility));
   @override
   Future<void> changePassword(String current, String next) => Net.run(() => _r.changePassword(current, next));
   @override

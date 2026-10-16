@@ -3,8 +3,11 @@ bool isValidPhone(String s) => RegExp(r'^\+?[0-9 ]{7,16}$').hasMatch(s.trim());
 class ProfileData {
   final String id, email, role;
   final String? fullName, phone;
+  final String phoneVisibility; // hidden | after_enquiry | public
   final bool suspended;
-  const ProfileData({required this.id, required this.email, required this.role, this.fullName, this.phone, this.suspended = false});
+  const ProfileData({required this.id, required this.email, required this.role, this.fullName, this.phone, this.phoneVisibility = 'hidden', this.suspended = false});
+
+  bool get isLandlord => role == 'landlord' || role == 'agent';
 
   String get name => (fullName ?? '').trim();
 

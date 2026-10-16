@@ -9,6 +9,7 @@ import '../../core/widgets/buttons.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/widgets/logo.dart';
 import '../../core/widgets/state_views.dart';
+import '../../data/location_models.dart';
 import '../../data/profile_models.dart';
 import '../../data/repository.dart';
 
@@ -43,6 +44,7 @@ class _EditSheetState extends State<_EditSheet> {
   final _form = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.profile.name);
   late final _phone = TextEditingController(text: widget.profile.phone ?? '');
+  late String _visibility = widget.profile.phoneVisibility;
   bool _busy = false;
 
   @override
@@ -56,7 +58,7 @@ class _EditSheetState extends State<_EditSheet> {
     if (!_form.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
-      await Services.profile.save(_name.text.trim(), _phone.text.trim());
+      await Services.profile.save(_name.text.trim(), _phone.text.trim(), _visibility);
       if (mounted) {
         showMessage(context, 'Profile saved.');
         Navigator.pop(context, true);
@@ -90,10 +92,27 @@ class _EditSheetState extends State<_EditSheet> {
               controller: _phone,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: 'Phone number (optional)', hintText: '08012345678', prefixIcon: Icon(Icons.phone_outlined)),
-              validator: (v) => (v ?? '').trim().isEmpty || isValidPhone(v!) ? null : 'Use digits only, like 08012345678',
+              validator: (v) {
+                final t = (v ?? '').trim();
+                if (t.isEmpty) return widget.profile.isLandlord && _visibility != 'hidden' ? 'Add a number, or set visibility to Hidden' : null;
+                return isValidPhone(t) ? null : 'Use digits only, like 08012345678';
+              },
             ),
             const SizedBox(height: 6),
-            Text('Only you and CampusStay reviewers can see your phone number. It is never shown to other users.', style: Theme.of(context).textTheme.bodySmall),
+            if (!widget.profile.isLandlord)
+              Text('Only you and CampusStay reviewers can see your phone number. It is never shown to other users.', style: Theme.of(context).textTheme.bodySmall)
+            else ...[
+              const SizedBox(height: 6),
+              const Text('Who can see my phone number?', style: TextStyle(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final e in phoneVisibilityLabels.entries)
+                  ChoiceChip(label: Text(e.value), selected: _visibility == e.key, onSelected: (_) => setState(() => _visibility = e.key)),
+              ]),
+              const SizedBox(height: 6),
+              Text(phoneVisibilityHelp[_visibility] ?? '', style: Theme.of(context).textTheme.bodySmall),
+              const Text('Your email is never shown. You can change this any time.', style: TextStyle(color: CS.muted, fontSize: 12.5)),
+            ],
             const SizedBox(height: 16),
             PrimaryButton(label: 'Save changes', loading: _busy, onPressed: _save),
           ]),

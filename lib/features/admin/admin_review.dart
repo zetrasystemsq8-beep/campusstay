@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/error_views.dart';
+import 'package:latlong2/latlong.dart';
+import '../../core/widgets/map_widgets.dart';
 import '../../core/widgets/property_details_widgets.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
@@ -174,6 +176,22 @@ class _ListingReviewScreenState extends State<ListingReviewScreen> {
                 if (l.universityId == null && l.extras.schoolOther.isNotEmpty)
                   Padding(padding: const EdgeInsets.only(top: 8), child: Text('School not on the list: ${l.extras.schoolOther}. Add it to cs_universities if it is real.', style: const TextStyle(color: CS.warn, fontWeight: FontWeight.w600))),
                 if (l.extras.landmark.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('Landmark: ${l.extras.landmark}')),
+                FutureBuilder(
+                  future: Services.landlord.myLocation(l.id),
+                  builder: (c, s) {
+                    if (s.connectionState != ConnectionState.done) return const SizedBox.shrink();
+                    if (s.hasError) return Padding(padding: const EdgeInsets.only(top: 8), child: Text('Could not load the pin.', style: Theme.of(context).textTheme.bodySmall));
+                    final loc = s.data;
+                    if (loc == null) return const Padding(padding: EdgeInsets.only(top: 8), child: Text('No map pin was set.', style: TextStyle(color: CS.warn, fontWeight: FontWeight.w600)));
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        ListingMap(center: LatLng(loc.lat, loc.lng), exact: true, height: 180),
+                        if (loc.addressLine.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Address: ${loc.addressLine}')),
+                      ]),
+                    );
+                  },
+                ),
                 FacilitiesByCategory(codes: l.amenities),
                 const SizedBox(height: 14),
                 Text(l.description.isEmpty ? 'No description.' : l.description),

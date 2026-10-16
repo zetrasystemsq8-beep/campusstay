@@ -26,6 +26,8 @@ jobs:
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#&\n    <uses-permission android:name="android.permission.INTERNET"/>#' $M
           sed -i 's#android:label="campusstay"#android:label="CampusStay"#' $M
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET"/>#&\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>#' $M
+          grep -q "ACCESS_FINE_LOCATION" $M || (echo "Location permission was not added" && exit 1)
           grep -q "android.permission.INTERNET" $M || (echo "INTERNET permission was not added" && exit 1)
       - run: flutter pub get
       - name: Generate launcher icons
@@ -40,14 +42,16 @@ jobs:
           SUPPORT_WHATSAPP: ${{ secrets.SUPPORT_WHATSAPP }}
           TERMS_URL: ${{ secrets.TERMS_URL }}
           PRIVACY_URL: ${{ secrets.PRIVACY_URL }}
+          MAP_TILE_URL: ${{ secrets.MAP_TILE_URL }}
+          MAP_ATTRIBUTION: ${{ secrets.MAP_ATTRIBUTION }}
         run: |
-          flutter build apk --release \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=SUPPORT_EMAIL="$SUPPORT_EMAIL" \
-            --dart-define=SUPPORT_WHATSAPP="$SUPPORT_WHATSAPP" \
-            --dart-define=TERMS_URL="$TERMS_URL" \
-            --dart-define=PRIVACY_URL="$PRIVACY_URL"
+          ARGS=(--dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
+          # Optional settings are passed only when set, so the app's built-in defaults apply otherwise.
+          for NAME in SUPPORT_EMAIL SUPPORT_WHATSAPP TERMS_URL PRIVACY_URL MAP_TILE_URL MAP_ATTRIBUTION; do
+            VALUE="${!NAME}"
+            if [ -n "$VALUE" ]; then ARGS+=(--dart-define="$NAME=$VALUE"); fi
+          done
+          flutter build apk --release "${ARGS[@]}"
       - uses: actions/upload-artifact@v4
         with:
           name: campusstay-apk

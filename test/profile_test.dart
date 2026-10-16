@@ -23,9 +23,10 @@ void main() {
 
   test('sample repository saves name and phone', () async {
     final r = SampleProfileRepository();
-    await r.save('Ada Obi', '08012345678');
+    await r.save('Ada Obi', '08012345678', 'after_enquiry');
     // AuthService.role() is demo-only, so just check the stored values via save/load pair
     expect((await r.load()).name, 'Ada Obi');
     expect((await r.load()).phone, '08012345678');
+    expect((await r.load()).phoneVisibility, 'after_enquiry');
   });
 }

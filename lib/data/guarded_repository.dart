@@ -3,6 +3,7 @@ import '../core/errors.dart';
 import 'admin_repository.dart';
 import 'admin_models.dart';
 import 'landlord_models.dart';
+import 'location_models.dart';
 import 'landlord_repository.dart';
 import 'models.dart';
 import 'repository.dart';
@@ -37,6 +38,15 @@ class GuardedRepository implements Repository {
   Future<void> report(String targetType, String targetId, String reason, String details) => Net.run(() => _r.report(targetType, targetId, reason, details));
   @override
   Future<void> blockUser(String userId) => Net.run(() => _r.blockUser(userId));
+  @override
+  Future<List<Property>> mapListings(SearchFilter f, {required double south, required double west, required double north, required double east}) =>
+      Net.run(() => _r.mapListings(f, south: south, west: west, north: north, east: east));
+  @override
+  Future<ExactLocation?> exactLocation(String propertyId) => Net.run(() => _r.exactLocation(propertyId));
+  @override
+  Future<String> contactStatus(String propertyId) => Net.run(() => _r.contactStatus(propertyId));
+  @override
+  Future<String> revealPhone(String propertyId) => Net.run(() => _r.revealPhone(propertyId));
 }
 
 class GuardedLandlordRepository implements LandlordRepository {
@@ -75,6 +85,12 @@ class GuardedLandlordRepository implements LandlordRepository {
   Future<List<ViewingRequestItem>> viewingRequests() => Net.run(() => _r.viewingRequests());
   @override
   Future<void> decideViewing(String id, String status) => Net.run(() => _r.decideViewing(id, status));
+  @override
+  Future<ExactLocation?> myLocation(String propertyId) => Net.run(() => _r.myLocation(propertyId));
+  @override
+  Future<void> saveLocation(String propertyId, double lat, double lng, String addressLine) => Net.run(() => _r.saveLocation(propertyId, lat, lng, addressLine));
+  @override
+  Future<void> clearLocation(String propertyId) => Net.run(() => _r.clearLocation(propertyId));
 }
 
 class GuardedAdminRepository implements AdminRepository {

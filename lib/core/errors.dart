@@ -24,6 +24,10 @@ enum AppErrorKind {
   ownListing,
   blocked,
   fileTooLarge,
+  locationOff,
+  locationDenied,
+  locationDeniedForever,
+  locationUnavailable,
   unsupportedFile,
   notSubmittable,
   server,
@@ -152,6 +156,14 @@ ErrorInfo describe(Object error) {
       return const ErrorInfo("Message can't be sent", "This conversation isn't available.");
     case AppErrorKind.fileTooLarge:
       return const ErrorInfo('That file is a heavyweight', 'Photos must be under 5 MB and documents under 10 MB.');
+    case AppErrorKind.locationOff:
+      return const ErrorInfo('Location is switched off', 'Turn on location (GPS) in your phone settings, then try again.');
+    case AppErrorKind.locationDenied:
+      return const ErrorInfo('We need your permission', 'Allow CampusStay to use your location for this. You can also move the map by hand.');
+    case AppErrorKind.locationDeniedForever:
+      return const ErrorInfo('Location is blocked', 'Open your phone settings, allow location for CampusStay, then try again.');
+    case AppErrorKind.locationUnavailable:
+      return const ErrorInfo("Can't find you right now", 'Move to an open area and try again, or place the pin by hand.', retryable: true);
     case AppErrorKind.unsupportedFile:
       return const ErrorInfo("We can't use that file type", 'Use a JPG, PNG or WebP image.');
     case AppErrorKind.notSubmittable:

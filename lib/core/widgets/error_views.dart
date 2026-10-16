@@ -9,6 +9,7 @@ IconData _icon(AppErrorKind k) => switch (k) {
       AppErrorKind.timeout => Icons.hourglass_empty_rounded,
       AppErrorKind.signInRequired || AppErrorKind.suspended || AppErrorKind.forbidden => Icons.lock_outline,
       AppErrorKind.notFound || AppErrorKind.notAvailable => Icons.search_off,
+      AppErrorKind.locationOff || AppErrorKind.locationDenied || AppErrorKind.locationDeniedForever || AppErrorKind.locationUnavailable => Icons.location_off_outlined,
       _ => Icons.sentiment_neutral_outlined,
     };
 

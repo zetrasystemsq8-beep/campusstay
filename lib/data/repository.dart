@@ -1,3 +1,4 @@
+import 'location_models.dart';
 import 'models.dart';
 import '../core/config.dart';
 import 'admin_repository.dart';
@@ -21,6 +22,10 @@ abstract class Repository {
   Future<void> sendMessage(String conversationId, String body);
   Future<void> report(String targetType, String targetId, String reason, String details);
   Future<void> blockUser(String userId);
+  Future<List<Property>> mapListings(SearchFilter f, {required double south, required double west, required double north, required double east});
+  Future<ExactLocation?> exactLocation(String propertyId);
+  Future<String> contactStatus(String propertyId);
+  Future<String> revealPhone(String propertyId);
 }
 
 class Services {

@@ -1,3 +1,5 @@
+import '../core/errors.dart';
+import 'location_models.dart';
 import 'models.dart';
 import 'repository.dart';
 
@@ -9,33 +11,53 @@ class SampleRepository implements Repository {
   final _msgs = <String, List<ChatMessage>>{};
 
   static const _all = <Property>[
-    Property(id: 's1', title: 'Sample single room', description: 'Fictional sample listing for development. Quiet street, close to the campus gate.', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 150000, rentPeriod: 'year', roomType: 'single_room', distanceKm: 1.2, amenities: ['water', 'electricity', 'parking']),
-    Property(id: 's2', title: 'Sample self-contain', description: 'Fictional sample listing for development.', area: 'Oye-Ekiti', university: 'FUOYE', rentNgn: 220000, rentPeriod: 'year', roomType: 'self_contain', distanceKm: 0.8, amenities: ['wifi', 'water', 'electricity', 'cctv'], extras: PropertyExtras(bedrooms: 1, furnishing: 'furnished', genderPreference: 'female_only', landmark: 'Opposite the main gate', cautionFeeNgn: 20000, allowsInstalments: true, maxOccupants: 2, houseRules: 'No loud music after 10pm.')),
+    Property(id: 's1', title: 'Sample single room', description: 'Fictional sample listing for development. Quiet street, close to the campus gate.', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 150000, rentPeriod: 'year', roomType: 'single_room', distanceKm: 1.2, amenities: ['water', 'electricity', 'parking'], approxLat: 7.6225, approxLng: 5.2210),
+    Property(id: 's2', title: 'Sample self-contain', description: 'Fictional sample listing for development.', area: 'Oye-Ekiti', university: 'FUOYE', rentNgn: 220000, rentPeriod: 'year', roomType: 'self_contain', distanceKm: 0.8, amenities: ['wifi', 'water', 'electricity', 'cctv'], extras: PropertyExtras(bedrooms: 1, furnishing: 'furnished', genderPreference: 'female_only', landmark: 'Opposite the main gate', cautionFeeNgn: 20000, allowsInstalments: true, maxOccupants: 2, houseRules: 'No loud music after 10pm.'), approxLat: 7.7990, approxLng: 5.3170),
     Property(id: 's3', title: 'Sample shared room', description: 'Fictional sample listing for development.', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 70000, rentPeriod: 'year', roomType: 'shared_room', distanceKm: 2.5, amenities: ['water', 'laundry']),
     Property(id: 's4', title: 'Sample 2-bedroom flat', description: 'Fictional sample listing for development.', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 450000, rentPeriod: 'year', roomType: 'apartment', distanceKm: 3.1, amenities: ['water', 'electricity', 'parking', 'kitchen', 'ac']),
     Property(id: 's5', title: 'Sample hostel bed space', description: 'Fictional sample listing for development.', area: 'Oye-Ekiti', university: 'FUOYE', rentNgn: 45000, rentPeriod: 'year', roomType: 'hostel', distanceKm: 0.4, amenities: ['water', 'cctv', 'laundry']),
   ];
 
+  bool _matches(Property p, SearchFilter f) {
+    final q = f.query.toLowerCase();
+    if (q.isNotEmpty && !('${p.title} ${p.area} ${p.university}'.toLowerCase().contains(q))) return false;
+    if (f.minRent != null && p.rentNgn < f.minRent!) return false;
+    if (f.maxRent != null && p.rentNgn > f.maxRent!) return false;
+    if (f.roomType != null && p.roomType != f.roomType) return false;
+    if (f.universityId != null && p.university != f.schoolName) return false;
+    if (f.furnishing != null && p.extras.furnishing != f.furnishing) return false;
+    if (f.minBedrooms != null && p.extras.bedrooms < f.minBedrooms!) return false;
+    if (f.forGender != null && p.extras.genderPreference != 'any' && p.extras.genderPreference != '${f.forGender}_only') return false;
+    if (f.amenities.isNotEmpty && !f.amenities.every(p.amenities.contains)) return false;
+    return true;
+  }
+
   @override
   Future<List<Property>> search(SearchFilter f, {int page = 0}) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    final q = f.query.toLowerCase();
-    final r = _all.where((p) {
-      if (q.isNotEmpty && !('${p.title} ${p.area} ${p.university}'.toLowerCase().contains(q))) return false;
-      if (f.minRent != null && p.rentNgn < f.minRent!) return false;
-      if (f.maxRent != null && p.rentNgn > f.maxRent!) return false;
-      if (f.roomType != null && p.roomType != f.roomType) return false;
-      if (f.universityId != null && p.university != f.schoolName) return false;
-      if (f.furnishing != null && p.extras.furnishing != f.furnishing) return false;
-      if (f.minBedrooms != null && p.extras.bedrooms < f.minBedrooms!) return false;
-      if (f.forGender != null && p.extras.genderPreference != 'any' && p.extras.genderPreference != '${f.forGender}_only') return false;
-      if (f.amenities.isNotEmpty && !f.amenities.every(p.amenities.contains)) return false;
-      return true;
-    }).toList();
+    final r = _all.where((p) => _matches(p, f)).toList();
     final start = page * Repository.pageSize;
     if (start >= r.length) return [];
     return r.sublist(start, (start + Repository.pageSize).clamp(0, r.length));
   }
+
+  @override
+  Future<List<Property>> mapListings(SearchFilter f, {required double south, required double west, required double north, required double east}) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    return _all
+        .where((p) => _matches(p, f) && p.approxLat != null && p.approxLng != null && p.approxLat! >= south && p.approxLat! <= north && p.approxLng! >= west && p.approxLng! <= east)
+        .toList();
+  }
+
+  @override
+  Future<ExactLocation?> exactLocation(String propertyId) async => null;
+
+  @override
+  Future<String> contactStatus(String propertyId) async => ContactStatus.hidden;
+
+  @override
+  Future<String> revealPhone(String propertyId) async =>
+      throw const AppException(AppErrorKind.forbidden);
 
   @override
   Future<Property> property(String id) async => _all.firstWhere((p) => p.id == id);
