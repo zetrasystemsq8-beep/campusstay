@@ -2,17 +2,20 @@
 /// the landlord view and the add-property flow.
 const kExtrasColumns = 'school_other,landmark,bedrooms,bathrooms,bathroom_type,kitchen_type,furnishing,gender_preference,'
     'max_occupants,available_from,lease_months,allows_instalments,caution_fee_ngn,service_charge_ngn,'
-    'landlord_lives_on_site,visitors_allowed,pets_allowed,house_rules';
+    'landlord_lives_on_site,visitors_allowed,pets_allowed,house_rules,walk_minutes,bike_fare_ngn,keke_fare_ngn,bus_fare_ngn,electricity_billing,water_billing';
 
 const furnishingLabels = {'unfurnished': 'Unfurnished', 'semi_furnished': 'Semi-furnished', 'furnished': 'Furnished'};
 const genderLabels = {'any': 'Anyone', 'male_only': 'Male students only', 'female_only': 'Female students only'};
 const bathroomLabels = {'private': 'Private bathroom', 'shared': 'Shared bathroom'};
+const electricityLabels = {'prepaid': 'Prepaid meter (you buy units)', 'shared': 'Shared bill', 'included': 'Included in the rent'};
+const waterLabels = {'included': 'Included in the rent', 'separate': 'You pay separately'};
 const kitchenLabels = {'private': 'Private kitchen', 'shared': 'Shared kitchen', 'none': 'No kitchen'};
 
 class PropertyExtras {
   final String schoolOther, landmark, bathroomType, kitchenType, furnishing, genderPreference, houseRules;
   final int bedrooms, bathrooms, maxOccupants;
-  final int? leaseMonths, cautionFeeNgn, serviceChargeNgn;
+  final int? leaseMonths, cautionFeeNgn, serviceChargeNgn, walkMinutes, bikeFareNgn, kekeFareNgn, busFareNgn;
+  final String? electricityBilling, waterBilling;
   final DateTime? availableFrom;
   final bool allowsInstalments, landlordLivesOnSite, visitorsAllowed, petsAllowed;
 
@@ -35,6 +38,12 @@ class PropertyExtras {
     this.visitorsAllowed = true,
     this.petsAllowed = false,
     this.houseRules = '',
+    this.walkMinutes,
+    this.bikeFareNgn,
+    this.kekeFareNgn,
+    this.busFareNgn,
+    this.electricityBilling,
+    this.waterBilling,
   });
 
   factory PropertyExtras.fromMap(Map<String, dynamic> m) => PropertyExtras(
@@ -56,6 +65,12 @@ class PropertyExtras {
         visitorsAllowed: (m['visitors_allowed'] ?? true) as bool,
         petsAllowed: (m['pets_allowed'] ?? false) as bool,
         houseRules: (m['house_rules'] ?? '') as String,
+        walkMinutes: (m['walk_minutes'] as num?)?.toInt(),
+        bikeFareNgn: (m['bike_fare_ngn'] as num?)?.toInt(),
+        kekeFareNgn: (m['keke_fare_ngn'] as num?)?.toInt(),
+        busFareNgn: (m['bus_fare_ngn'] as num?)?.toInt(),
+        electricityBilling: m['electricity_billing'] as String?,
+        waterBilling: m['water_billing'] as String?,
       );
 
   Map<String, dynamic> toMap() => {
@@ -77,5 +92,11 @@ class PropertyExtras {
         'visitors_allowed': visitorsAllowed,
         'pets_allowed': petsAllowed,
         'house_rules': houseRules.isEmpty ? null : houseRules,
+        'walk_minutes': walkMinutes,
+        'bike_fare_ngn': bikeFareNgn,
+        'keke_fare_ngn': kekeFareNgn,
+        'bus_fare_ngn': busFareNgn,
+        'electricity_billing': electricityBilling,
+        'water_billing': waterBilling,
       };
 }

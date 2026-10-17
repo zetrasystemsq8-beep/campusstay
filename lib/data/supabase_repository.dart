@@ -27,6 +27,7 @@ class SupabaseRepository implements Repository {
     if (f.universityId != null) q = q.eq('university_id', f.universityId!);
     if (f.furnishing != null) q = q.eq('furnishing', f.furnishing!);
     if (f.minBedrooms != null) q = q.gte('bedrooms', f.minBedrooms!);
+    if (f.maxWalk != null) q = q.lte('walk_minutes', f.maxWalk!);
     if (f.forGender != null) q = q.inFilter('gender_preference', ['any', '${f.forGender}_only']);
     if (f.amenities.isNotEmpty) q = q.contains('amenity_codes', f.amenities.toList());
     final text = f.query.trim().replaceAll(RegExp(r'[%_,()]'), ' ');

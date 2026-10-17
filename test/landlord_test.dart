@@ -15,6 +15,22 @@ ListingInput _input(String title) => ListingInput(
     );
 
 void main() {
+  test('transport and bills survive the database round trip', () {
+    const e = PropertyExtras(walkMinutes: 10, bikeFareNgn: 300, kekeFareNgn: 200, busFareNgn: 150, electricityBilling: 'prepaid', waterBilling: 'included');
+    final back = PropertyExtras.fromMap(e.toMap());
+    expect(back.walkMinutes, 10);
+    expect(back.bikeFareNgn, 300);
+    expect(back.kekeFareNgn, 200);
+    expect(back.busFareNgn, 150);
+    expect(back.electricityBilling, 'prepaid');
+    expect(back.waterBilling, 'included');
+  });
+
+  test('walking time is used when there is no distance in km', () {
+    const p = Property(id: '1', title: 'Room', description: '', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 1, rentPeriod: 'year', roomType: 'single_room', extras: PropertyExtras(walkMinutes: 10));
+    expect(p.locationLabel, 'Ado-Ekiti, 10 min walk from EKSU');
+  });
+
   test('amenity catalog ids are unique and match labels', () {
     final ids = amenityCatalog.map((a) => a.id).toSet();
     final codes = amenityCatalog.map((a) => a.code).toSet();

@@ -196,6 +196,8 @@ class _ListingReviewScreenState extends State<ListingReviewScreen> {
                 const SizedBox(height: 14),
                 Text(l.description.isEmpty ? 'No description.' : l.description),
                 const SizedBox(height: 14),
+                TransportCard(extras: l.extras),
+                const SizedBox(height: 10),
                 CostsCard(rentLabel: l.rentLabel, rentNgn: l.rentNgn, extras: l.extras, otherFees: l.extraFees),
                 const SizedBox(height: 10),
                 RulesCard(extras: l.extras),

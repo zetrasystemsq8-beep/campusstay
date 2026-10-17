@@ -167,6 +167,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       Text(p.description.isEmpty ? 'No description provided.' : p.description, style: Theme.of(context).textTheme.bodyLarge),
                       const SizedBox(height: 20),
                       _LocationSection(property: p),
+                      if (p.extras.walkMinutes != null || p.extras.bikeFareNgn != null || p.extras.kekeFareNgn != null || p.extras.busFareNgn != null) ...[
+                        const SizedBox(height: 20),
+                        Text('Getting to school', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        TransportCard(extras: p.extras),
+                      ],
                       const SizedBox(height: 20),
                       Text('Costs', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),

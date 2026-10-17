@@ -38,6 +38,7 @@ class PropertyFacts extends StatelessWidget {
       _Fact(Icons.chair_outlined, furnishingLabels[e.furnishing] ?? ''),
       _Fact(Icons.people_outline, e.maxOccupants == 1 ? 'For 1 person' : 'Up to ${e.maxOccupants} people'),
       if (e.genderPreference != 'any') _Fact(Icons.wc, genderLabels[e.genderPreference] ?? '', highlight: true),
+      if (e.walkMinutes != null) _Fact(Icons.directions_walk, '${e.walkMinutes} min walk to school', highlight: true),
       if (e.availableFrom != null) _Fact(Icons.event_available_outlined, 'Available from ${fmtDate(e.availableFrom!)}'),
       if (e.leaseMonths != null) _Fact(Icons.schedule, 'Minimum stay ${e.leaseMonths} month${e.leaseMonths == 1 ? '' : 's'}'),
       if (e.landlordLivesOnSite) const _Fact(Icons.house_outlined, 'Landlord lives on the property'),
@@ -103,6 +104,8 @@ class CostsCard extends StatelessWidget {
         if (extras.serviceChargeNgn != null) _Row('Service charge', '₦${formatNaira(extras.serviceChargeNgn!)}'),
         if (caution + service > 0) ...[const Divider(height: 16), _Row('First payment', '₦${formatNaira(upfront)}', strong: true)],
         _Row('Pay in instalments', extras.allowsInstalments ? 'Offered' : 'Not offered'),
+        if (extras.electricityBilling != null) _Row('Electricity', electricityLabels[extras.electricityBilling] ?? ''),
+        if (extras.waterBilling != null) _Row('Water', waterLabels[extras.waterBilling] ?? ''),
         if ((otherFees ?? '').isNotEmpty) _Row('Other fees', otherFees!),
       ]),
     );
@@ -126,6 +129,40 @@ class RulesCard extends StatelessWidget {
         line(extras.visitorsAllowed, extras.visitorsAllowed ? 'Visitors allowed' : 'No visitors'),
         line(extras.petsAllowed, extras.petsAllowed ? 'Pets allowed' : 'No pets'),
         if (extras.houseRules.isNotEmpty) ...[const SizedBox(height: 8), Text(extras.houseRules)],
+      ]),
+    );
+  }
+}
+
+/// Walking time and typical fares from the property to the school gate.
+class TransportCard extends StatelessWidget {
+  final PropertyExtras extras;
+  const TransportCard({super.key, required this.extras});
+
+  bool get hasAny => extras.walkMinutes != null || extras.bikeFareNgn != null || extras.kekeFareNgn != null || extras.busFareNgn != null;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!hasAny) return const SizedBox.shrink();
+    Widget row(IconData icon, String label, String value) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(children: [
+            Icon(icon, size: 20, color: CS.blue),
+            const SizedBox(width: 10),
+            Expanded(child: Text(label)),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ]),
+        );
+    String fare(int v) => v == 0 ? 'Free' : '₦${formatNaira(v)} per trip';
+    return Container(
+      padding: const EdgeInsets.all(CS.s16),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(CS.rMd), border: Border.all(color: CS.line)),
+      child: Column(children: [
+        if (extras.walkMinutes != null) row(Icons.directions_walk, 'On foot', '${extras.walkMinutes} minutes'),
+        if (extras.bikeFareNgn != null) row(Icons.two_wheeler, 'Okada (bike)', fare(extras.bikeFareNgn!)),
+        if (extras.kekeFareNgn != null) row(Icons.electric_rickshaw, 'Keke (tricycle)', fare(extras.kekeFareNgn!)),
+        if (extras.busFareNgn != null) row(Icons.directions_bus_outlined, 'Bus or taxi', fare(extras.busFareNgn!)),
+        const Padding(padding: EdgeInsets.only(top: 6), child: Text('Fares are the landlord\'s estimate and can change.', style: TextStyle(color: CS.muted, fontSize: 12))),
       ]),
     );
   }

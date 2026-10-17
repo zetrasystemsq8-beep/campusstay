@@ -34,6 +34,8 @@ Property features update: schools (272 institutions in all 36 states and the FCT
 
 Map and contact update: landlords pin the property on a map (step 2 of Add Property). Students see an approximate ~500 m area; the exact pin and address are released by the database only to the owner, admins, and a student whose viewing the landlord has confirmed. A map view shows listings as price pins. Landlords choose who can see their phone (hidden, after a student messages them, or everyone signed in); the server decides, the number is fetched only when a student taps Call or WhatsApp, and each reveal is rate limited and logged. Run `0008_location_contact.sql`. Maps use OpenStreetMap's public tiles by default, which suit testing only; before real traffic, set the optional `MAP_TILE_URL` and `MAP_ATTRIBUTION` secrets to a tile provider you have an account with.
 
+Plain-language update: the add-property flow asks how long it takes to walk to school (instead of kilometres), typical okada, keke and bus fares to the school gate with one-tap amounts, how light and water are paid, and offers a suggested title and description. Property types are big cards, there is a Help button, and text is larger on that screen. Students see "Getting to school", bills, and can filter by walking time. Run `0009_transport_bills.sql`.
+
 All CampusStay database objects, buckets and functions are prefixed `cs_` / `cs-` so they can share a Supabase project with other apps. Run `supabase/all_in_one.sql` once (or the four migrations in order).
 
 ## Public landlord page

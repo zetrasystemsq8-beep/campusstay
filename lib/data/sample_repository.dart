@@ -12,7 +12,7 @@ class SampleRepository implements Repository {
 
   static const _all = <Property>[
     Property(id: 's1', title: 'Sample single room', description: 'Fictional sample listing for development. Quiet street, close to the campus gate.', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 150000, rentPeriod: 'year', roomType: 'single_room', distanceKm: 1.2, amenities: ['water', 'electricity', 'parking'], approxLat: 7.6225, approxLng: 5.2210),
-    Property(id: 's2', title: 'Sample self-contain', description: 'Fictional sample listing for development.', area: 'Oye-Ekiti', university: 'FUOYE', rentNgn: 220000, rentPeriod: 'year', roomType: 'self_contain', distanceKm: 0.8, amenities: ['wifi', 'water', 'electricity', 'cctv'], extras: PropertyExtras(bedrooms: 1, furnishing: 'furnished', genderPreference: 'female_only', landmark: 'Opposite the main gate', cautionFeeNgn: 20000, allowsInstalments: true, maxOccupants: 2, houseRules: 'No loud music after 10pm.'), approxLat: 7.7990, approxLng: 5.3170),
+    Property(id: 's2', title: 'Sample self-contain', description: 'Fictional sample listing for development.', area: 'Oye-Ekiti', university: 'FUOYE', rentNgn: 220000, rentPeriod: 'year', roomType: 'self_contain', distanceKm: 0.8, amenities: ['wifi', 'water', 'electricity', 'cctv'], extras: PropertyExtras(bedrooms: 1, furnishing: 'furnished', genderPreference: 'female_only', landmark: 'Opposite the main gate', cautionFeeNgn: 20000, allowsInstalments: true, maxOccupants: 2, houseRules: 'No loud music after 10pm.', walkMinutes: 10, bikeFareNgn: 300, kekeFareNgn: 200, electricityBilling: 'prepaid', waterBilling: 'included'), approxLat: 7.7990, approxLng: 5.3170),
     Property(id: 's3', title: 'Sample shared room', description: 'Fictional sample listing for development.', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 70000, rentPeriod: 'year', roomType: 'shared_room', distanceKm: 2.5, amenities: ['water', 'laundry']),
     Property(id: 's4', title: 'Sample 2-bedroom flat', description: 'Fictional sample listing for development.', area: 'Ado-Ekiti', university: 'EKSU', rentNgn: 450000, rentPeriod: 'year', roomType: 'apartment', distanceKm: 3.1, amenities: ['water', 'electricity', 'parking', 'kitchen', 'ac']),
     Property(id: 's5', title: 'Sample hostel bed space', description: 'Fictional sample listing for development.', area: 'Oye-Ekiti', university: 'FUOYE', rentNgn: 45000, rentPeriod: 'year', roomType: 'hostel', distanceKm: 0.4, amenities: ['water', 'cctv', 'laundry']),
@@ -27,6 +27,7 @@ class SampleRepository implements Repository {
     if (f.universityId != null && p.university != f.schoolName) return false;
     if (f.furnishing != null && p.extras.furnishing != f.furnishing) return false;
     if (f.minBedrooms != null && p.extras.bedrooms < f.minBedrooms!) return false;
+    if (f.maxWalk != null && (p.extras.walkMinutes == null || p.extras.walkMinutes! > f.maxWalk!)) return false;
     if (f.forGender != null && p.extras.genderPreference != 'any' && p.extras.genderPreference != '${f.forGender}_only') return false;
     if (f.amenities.isNotEmpty && !f.amenities.every(p.amenities.contains)) return false;
     return true;

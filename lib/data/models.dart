@@ -75,9 +75,12 @@ class Property {
   String get rentLabel => '₦${formatNaira(rentNgn)}/${rentPeriod == 'month' ? 'month' : 'year'}';
   String get roomTypeLabel => roomTypeLabels[roomType] ?? roomType;
   String get school => university.isNotEmpty ? university : extras.schoolOther;
-  String get locationLabel => school.isEmpty
-      ? area
-      : (distanceKm == null ? '$area, $school' : '$area, ${distanceKm!.toStringAsFixed(1)} km from $school');
+  String get locationLabel {
+    if (school.isEmpty) return area;
+    if (distanceKm != null) return '$area, ${distanceKm!.toStringAsFixed(1)} km from $school';
+    if (extras.walkMinutes != null) return '$area, ${extras.walkMinutes} min walk from $school';
+    return '$area, $school';
+  }
 }
 
 const roomTypeLabels = {
@@ -108,6 +111,7 @@ class SearchFilter {
   final String? furnishing;
   final String? forGender; // male | female: matches listings open to that gender
   final int? minBedrooms;
+  final int? maxWalk; // minutes on foot
   final Set<String> amenities;
   const SearchFilter({
     this.query = '',
@@ -119,6 +123,7 @@ class SearchFilter {
     this.furnishing,
     this.forGender,
     this.minBedrooms,
+    this.maxWalk,
     this.amenities = const {},
   });
 
@@ -132,11 +137,12 @@ class SearchFilter {
         furnishing: furnishing,
         forGender: forGender,
         minBedrooms: minBedrooms,
+        maxWalk: maxWalk,
         amenities: amenities,
       );
 
   int get activeCount =>
-      [minRent != null || maxRent != null, roomType != null, universityId != null, furnishing != null, forGender != null, minBedrooms != null, amenities.isNotEmpty]
+      [minRent != null || maxRent != null, roomType != null, universityId != null, furnishing != null, forGender != null, minBedrooms != null, maxWalk != null, amenities.isNotEmpty]
           .where((b) => b)
           .length;
   bool get isActive => activeCount > 0;

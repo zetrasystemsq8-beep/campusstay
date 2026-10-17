@@ -193,6 +193,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late String? _furnishing = widget.initial.furnishing;
   late String? _gender = widget.initial.forGender;
   late int? _beds = widget.initial.minBedrooms;
+  late int? _walk = widget.initial.maxWalk;
   late final Set<String> _amen = {...widget.initial.amenities};
 
   Future<void> _pickSchool() async {
@@ -236,6 +237,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                     ChoiceChip(label: const Text('Any'), selected: _beds == null, onSelected: (_) => setState(() => _beds = null)),
                     for (final n in [1, 2, 3, 4]) ChoiceChip(label: Text('$n+'), selected: _beds == n, onSelected: (_) => setState(() => _beds = n)),
                   ]),
+                  _h('Walking time to school'),
+                  Wrap(spacing: 8, children: [
+                    ChoiceChip(label: const Text('Any'), selected: _walk == null, onSelected: (_) => setState(() => _walk = null)),
+                    for (final n in [5, 10, 15, 20]) ChoiceChip(label: Text('$n min'), selected: _walk == n, onSelected: (_) => setState(() => _walk = n)),
+                  ]),
                   _h('Furnishing'),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     for (final e in furnishingLabels.entries) ChoiceChip(label: Text(e.value), selected: _furnishing == e.key, onSelected: (s) => setState(() => _furnishing = s ? e.key : null)),
@@ -276,6 +282,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                   furnishing: _furnishing,
                   forGender: _gender,
                   minBedrooms: _beds,
+                  maxWalk: _walk,
                   amenities: _amen,
                 ),
               ),
