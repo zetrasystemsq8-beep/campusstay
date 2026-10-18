@@ -11,6 +11,7 @@ import '../../core/widgets/logo.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/location_models.dart';
 import '../../data/profile_models.dart';
+import '../legal/legal_screens.dart';
 import '../../data/repository.dart';
 
 Future<void> _openLink(BuildContext context, Uri uri) async {
@@ -455,10 +456,20 @@ class AboutScreen extends StatelessWidget {
               const SizedBox(height: 20),
               const Text('CampusStay connects Nigerian students directly with landlords. Listings are free, there is no agent commission, and every listing is reviewed before students can see it.'),
               const SizedBox(height: 24),
-              if (AppConfig.termsUrl.isNotEmpty)
-                ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.description_outlined), title: const Text('Terms of use'), trailing: const Icon(Icons.open_in_new, size: 18), onTap: () => _openLink(context, Uri.parse(AppConfig.termsUrl))),
-              if (AppConfig.privacyUrl.isNotEmpty)
-                ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Privacy policy'), trailing: const Icon(Icons.open_in_new, size: 18), onTap: () => _openLink(context, Uri.parse(AppConfig.privacyUrl))),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Terms of use'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => AppConfig.termsUrl.isNotEmpty ? _openLink(context, Uri.parse(AppConfig.termsUrl)) : Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TermsScreen())),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.privacy_tip_outlined),
+                title: const Text('Privacy policy'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => AppConfig.privacyUrl.isNotEmpty ? _openLink(context, Uri.parse(AppConfig.privacyUrl)) : Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())),
+              ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.article_outlined),
@@ -466,8 +477,6 @@ class AboutScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showLicensePage(context: context, applicationName: 'CampusStay', applicationVersion: version),
               ),
-              if (AppConfig.termsUrl.isEmpty && AppConfig.privacyUrl.isEmpty)
-                const Padding(padding: EdgeInsets.only(top: 12), child: Text('Terms and privacy policy links have not been set up yet.', style: TextStyle(color: CS.muted, fontSize: 13))),
             ]);
           },
         ),

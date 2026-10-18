@@ -38,6 +38,8 @@ Plain-language update: the add-property flow asks how long it takes to walk to s
 
 Tools update: landlords can copy a listing, track spaces left (it marks the listing rented at zero), see views, saves, enquiries and viewings per listing, and show students how fast they usually reply. Students can share a listing (WhatsApp or copy; never the exact address or phone), compare up to 3 saved places side by side, save searches and see how many new matches appeared, and get scam warnings in chat plus a safety checklist on every listing. Run `0010_landlord_student_tools.sql`. Optional secret `APP_LINK` adds your app link to shared listings.
 
+Quality update (10 items): forgot password inside the app with a code (edit the Supabase "Reset Password" email template so it contains `{{ .Token }}`, for example "Your CampusStay code is {{ .Token }}"); in-app Terms of use and Privacy policy with an "I agree" box that is recorded; reviews and ratings from students whose viewing was confirmed and has happened, shown without names, with landlord replies and reporting; choose the cover photo; saved listings and the first page of listings still open with no signal and are cleared on log out; voice typing for text boxes; one-tap quick replies in chat; admin schools manager, bulk approve or reject, and an analytics page. Run `0011_reviews_terms_analytics.sql`. The terms and privacy texts describe what the app does today but are not legal advice: have a lawyer review them before launch.
+
 All CampusStay database objects, buckets and functions are prefixed `cs_` / `cs-` so they can share a Supabase project with other apps. Run `supabase/all_in_one.sql` once (or the four migrations in order).
 
 ## Public landlord page

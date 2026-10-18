@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/errors.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/error_views.dart';
+import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/favourites_store.dart';
@@ -46,6 +47,7 @@ class _SavedScreenState extends State<SavedScreen> {
               return const EmptyState(icon: Icons.favorite_border, title: 'Nothing saved yet', message: 'Tap the heart on a listing to keep it here. Save two or three to compare them.');
             }
             return Column(children: [
+              const OfflineBanner(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(CS.s16, CS.s16, CS.s8, 0),
                 child: Row(children: [

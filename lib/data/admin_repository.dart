@@ -18,6 +18,9 @@ abstract class AdminRepository {
   Future<List<LeadItem>> leads();
   Future<void> setLeadStatus(String id, String status);
   Future<List<AuditItem>> audit();
+  Future<void> deleteReview(String id, String note);
+  Future<Map<String, List<(String, int)>>> breakdown();
+  Future<void> saveSchool(String? id, String name, String shortName, String city, String state, String kind);
 }
 
 /// Development mode has no admin account, so everything is empty.
@@ -46,6 +49,12 @@ class SampleAdminRepository implements AdminRepository {
   Future<void> setLeadStatus(String id, String status) async {}
   @override
   Future<List<AuditItem>> audit() async => [];
+  @override
+  Future<void> deleteReview(String id, String note) async {}
+  @override
+  Future<Map<String, List<(String, int)>>> breakdown() async => {};
+  @override
+  Future<void> saveSchool(String? id, String name, String shortName, String city, String state, String kind) async {}
 }
 
 class SupabaseAdminRepository implements AdminRepository {
@@ -148,5 +157,29 @@ class SupabaseAdminRepository implements AdminRepository {
         .map<AuditItem>((r) => AuditItem((r['id'] as num).toInt(), r['action'] as String, r['target_type'] as String, r['target_id'] as String?,
             Map<String, dynamic>.from((r['details'] as Map?) ?? {}), DateTime.parse(r['created_at'] as String).toLocal()))
         .toList();
+  }
+
+  @override
+  Future<void> deleteReview(String id, String note) async {
+    await _c.rpc('cs_admin_delete_review', params: {'p_review_id': id, 'p_note': note});
+  }
+
+  @override
+  Future<Map<String, List<(String, int)>>> breakdown() async {
+    final r = await _c.rpc('cs_admin_breakdown') as Map;
+    return {
+      for (final k in r.keys.cast<String>())
+        k: [for (final e in (r[k] as List).cast<Map>()) ((e['label'] ?? '') as String, (e['n'] as num).toInt())],
+    };
+  }
+
+  @override
+  Future<void> saveSchool(String? id, String name, String shortName, String city, String state, String kind) async {
+    final row = {'name': name, 'short_name': shortName, 'city': city, 'state': state, 'kind': kind};
+    if (id == null) {
+      await _c.from('cs_universities').insert(row);
+    } else {
+      await _c.from('cs_universities').update(row).eq('id', id);
+    }
   }
 }

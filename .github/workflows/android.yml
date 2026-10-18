@@ -27,6 +27,14 @@ jobs:
           sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#&\n    <uses-permission android:name="android.permission.INTERNET"/>#' $M
           sed -i 's#android:label="campusstay"#android:label="CampusStay"#' $M
           sed -i 's#<uses-permission android:name="android.permission.INTERNET"/>#&\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>#' $M
+          sed -i 's#<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>#&\n    <uses-permission android:name="android.permission.RECORD_AUDIO"/>#' $M
+          if grep -q "<queries>" $M; then
+            sed -i 's#<queries>#&\n        <intent><action android:name="android.speech.RecognitionService"/></intent>#' $M
+          else
+            sed -i 's#<application#<queries>\n        <intent><action android:name="android.speech.RecognitionService"/></intent>\n    </queries>\n    <application#' $M
+          fi
+          grep -q "RECORD_AUDIO" $M || (echo "Microphone permission was not added" && exit 1)
+          grep -q "RecognitionService" $M || (echo "Speech queries were not added" && exit 1)
           grep -q "ACCESS_FINE_LOCATION" $M || (echo "Location permission was not added" && exit 1)
           grep -q "android.permission.INTERNET" $M || (echo "INTERNET permission was not added" && exit 1)
       - run: flutter pub get

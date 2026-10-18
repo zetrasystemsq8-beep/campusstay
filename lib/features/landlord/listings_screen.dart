@@ -8,6 +8,7 @@ import '../../core/widgets/state_views.dart';
 import '../../data/landlord_models.dart';
 import '../../data/landlord_repository.dart';
 import '../../data/repository.dart';
+import '../property/reviews_widgets.dart';
 import 'listing_wizard.dart';
 
 class ListingsScreen extends StatefulWidget {
@@ -93,6 +94,8 @@ class _ListingsScreenState extends State<ListingsScreen> {
         return;
       case 'renew':
         return _run(() => r.renew(l.id), 'Confirmed for 60 more days.');
+      case 'reviews':
+        return Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReviewsScreen(propertyId: l.id, title: 'Reviews of ${l.title}')));
       case 'copy':
         try {
           final id = await duplicateListing(r, l);
@@ -198,6 +201,7 @@ class _Card extends StatelessWidget {
     final items = <PopupMenuEntry<String>>[
       const PopupMenuItem(value: 'edit', child: Text('Edit')),
       const PopupMenuItem(value: 'copy', child: Text('Copy this listing')),
+      if (l.moderation == 'approved') const PopupMenuItem(value: 'reviews', child: Text('See reviews')),
       if (l.isActive) const PopupMenuItem(value: 'pause', child: Text('Pause listing')),
       if (l.isActive) const PopupMenuItem(value: 'rented', child: Text('Mark as rented')),
       if (l.moderation == 'approved' && l.availability == 'paused') const PopupMenuItem(value: 'resume', child: Text('Make live again')),

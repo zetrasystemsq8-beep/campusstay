@@ -27,6 +27,10 @@ abstract class Repository {
   Future<String> contactStatus(String propertyId);
   Future<String> revealPhone(String propertyId);
   Future<String> replySpeed(String propertyId);
+  Future<ReviewSummary> reviewSummary(String propertyId);
+  Future<List<Review>> reviews(String propertyId);
+  Future<String> canReview(String propertyId); // signin | own | no | yes | edit
+  Future<void> submitReview(String propertyId, int rating, String comment);
   Future<List<SavedSearch>> savedSearches();
   Future<void> saveSearch(String name, SearchFilter f);
   Future<void> deleteSavedSearch(String id);

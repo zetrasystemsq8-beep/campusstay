@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/errors.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/error_views.dart';
@@ -50,54 +51,140 @@ class ReviewQueueScreen extends StatefulWidget {
 
 class _ReviewQueueScreenState extends State<ReviewQueueScreen> {
   late Future<List<LandlordListing>> _f = Services.admin.pendingListings();
+  bool _select = false, _busy = false;
+  final _picked = <String>{};
   void _reload() => setState(() => _f = Services.admin.pendingListings());
 
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(padding: const EdgeInsets.fromLTRB(CS.s16, CS.s16, CS.s16, CS.s8), child: Text('Listings to review', style: Theme.of(context).textTheme.headlineMedium)),
-        Expanded(
-          child: FutureBuilder<List<LandlordListing>>(
-            future: _f,
-            builder: (c, s) {
-              if (s.connectionState != ConnectionState.done) return const SkeletonList();
-              if (s.hasError) return ErrorView(error: s.error!, onRetry: _reload);
-              if (s.data!.isEmpty) return const EmptyState(icon: Icons.task_alt, title: 'All caught up', message: 'New submissions waiting for review appear here.');
-              return RefreshIndicator(
-                onRefresh: () async {
-                  _reload();
-                  await _f;
-                },
-                child: ListView(padding: const EdgeInsets.all(CS.s16), children: [
-                  for (final l in s.data!)
-                    GestureDetector(
-                      onTap: () async {
-                        final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => ListingReviewScreen(listing: l)));
-                        if (changed == true) widget.onChanged();
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: CS.s12),
-                        decoration: BoxDecoration(color: CS.bg, borderRadius: BorderRadius.circular(CS.rLg), border: Border.all(color: CS.line), boxShadow: CS.shadow),
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          PropertyPhoto(url: l.photos.isEmpty ? null : l.photos.first.url, height: 110),
-                          Padding(
-                            padding: const EdgeInsets.all(CS.s12),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(l.title, style: Theme.of(context).textTheme.titleMedium),
-                              Text('${l.area}, ${l.school} · ${l.rentLabel}', style: Theme.of(context).textTheme.bodySmall),
-                              const SizedBox(height: 6),
-                              VerificationBadge(l.verification),
-                            ]),
-                          ),
-                        ]),
-                      ),
-                    ),
-                ]),
-              );
-            },
-          ),
+  Future<void> _bulk(List<LandlordListing> all, String decision) async {
+    final chosen = all.where((l) => _picked.contains(l.id)).toList();
+    if (chosen.isEmpty) return;
+    final approve = decision == 'approved';
+    final note = await askNote(context,
+        title: approve ? 'Approve ${chosen.length} listings?' : 'Reject ${chosen.length} listings',
+        action: approve ? 'Approve all' : 'Reject all',
+        required: !approve,
+        hint: approve ? 'Optional note. You are approving without opening each one.' : 'Reason sent to each landlord');
+    if (note == null || !mounted) return;
+    setState(() => _busy = true);
+    var done = 0;
+    final failed = <String>[];
+    for (final l in chosen) {
+      try {
+        await Services.admin.moderate(l.id, decision, note);
+        done++;
+      } catch (e) {
+        failed.add('${l.title}: ${describe(e).title}');
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _select = false;
+      _picked.clear();
+    });
+    if (failed.isEmpty) {
+      showMessage(context, '$done listing${done == 1 ? '' : 's'} ${approve ? 'approved' : 'rejected'}.');
+    } else {
+      await showDialog<void>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: Text('$done done, ${failed.length} failed'),
+          content: Text(failed.join('\n')),
+          actions: [FilledButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))],
         ),
-      ]);
+      );
+    }
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<LandlordListing>>(
+        future: _f,
+        builder: (c, s) {
+          final list = s.data ?? const <LandlordListing>[];
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(CS.s16, CS.s16, CS.s8, CS.s8),
+              child: Row(children: [
+                Expanded(child: Text('Listings to review', style: Theme.of(context).textTheme.headlineMedium)),
+                if (list.length > 1)
+                  TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() {
+                              _select = !_select;
+                              _picked.clear();
+                            }),
+                    child: Text(_select ? 'Cancel' : 'Select'),
+                  ),
+              ]),
+            ),
+            Expanded(
+              child: Builder(builder: (c) {
+                if (s.connectionState != ConnectionState.done) return const SkeletonList();
+                if (s.hasError) return ErrorView(error: s.error!, onRetry: _reload);
+                if (list.isEmpty) return const EmptyState(icon: Icons.task_alt, title: 'All caught up', message: 'New submissions waiting for review appear here.');
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    _reload();
+                    await _f;
+                  },
+                  child: ListView(padding: const EdgeInsets.all(CS.s16), children: [
+                    for (final l in list)
+                      GestureDetector(
+                        onTap: () async {
+                          if (_select) {
+                            setState(() => _picked.contains(l.id) ? _picked.remove(l.id) : _picked.add(l.id));
+                            return;
+                          }
+                          final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => ListingReviewScreen(listing: l)));
+                          if (changed == true) widget.onChanged();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: CS.s12),
+                          decoration: BoxDecoration(
+                            color: CS.bg,
+                            borderRadius: BorderRadius.circular(CS.rLg),
+                            border: Border.all(color: _picked.contains(l.id) ? CS.blue : CS.line, width: _picked.contains(l.id) ? 3 : 1),
+                            boxShadow: CS.shadow,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Stack(children: [
+                              PropertyPhoto(url: l.photos.isEmpty ? null : l.photos.first.url, height: 110),
+                              if (_select) Positioned(left: 8, top: 8, child: Icon(_picked.contains(l.id) ? Icons.check_circle : Icons.radio_button_unchecked, color: _picked.contains(l.id) ? CS.blue : Colors.white, size: 30)),
+                            ]),
+                            Padding(
+                              padding: const EdgeInsets.all(CS.s12),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(l.title, style: Theme.of(context).textTheme.titleMedium),
+                                Text('${l.area}, ${l.school} · ${l.rentLabel}', style: Theme.of(context).textTheme.bodySmall),
+                                const SizedBox(height: 6),
+                                VerificationBadge(l.verification),
+                              ]),
+                            ),
+                          ]),
+                        ),
+                      ),
+                  ]),
+                );
+              }),
+            ),
+            if (_select)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(CS.s16, 4, CS.s16, CS.s12),
+                  child: Row(children: [
+                    Expanded(child: OutlinedButton(style: OutlinedButton.styleFrom(foregroundColor: CS.danger), onPressed: _busy || _picked.isEmpty ? null : () => _bulk(list, 'rejected'), child: Text('Reject (${_picked.length})'))),
+                    const SizedBox(width: 10),
+                    Expanded(child: FilledButton(onPressed: _busy || _picked.isEmpty ? null : () => _bulk(list, 'approved'), child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text('Approve (${_picked.length})'))),
+                  ]),
+                ),
+              ),
+          ]);
+        },
+      );
 }
 
 class ListingReviewScreen extends StatefulWidget {

@@ -14,6 +14,7 @@ import '../../core/widgets/landlord_theme.dart';
 import '../../core/widgets/map_widgets.dart';
 import '../../core/widgets/property_details_widgets.dart';
 import '../../core/widgets/school_picker.dart';
+import '../../core/widgets/voice_button.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/landlord_models.dart';
 import '../../data/models.dart';
@@ -350,6 +351,35 @@ class _ListingWizardState extends State<ListingWizard> {
       if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _photoMenu(_Photo p) async {
+    final isCover = _photos.isNotEmpty && identical(_photos.first, p);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (!isCover) ListTile(leading: const Icon(Icons.star_outline, color: CS.green), title: const Text('Make this the cover photo'), subtitle: const Text('The first photo students see'), onTap: () => Navigator.pop(c, 'cover')),
+          ListTile(leading: const Icon(Icons.delete_outline, color: CS.danger), title: const Text('Remove this photo'), onTap: () => Navigator.pop(c, 'remove')),
+        ]),
+      ),
+    );
+    if (action == 'remove') return _removePhoto(p);
+    if (action != 'cover' || !mounted) return;
+    final before = [..._photos];
+    setState(() {
+      _photos.remove(p);
+      _photos.insert(0, p);
+    });
+    try {
+      await Services.landlord.setPhotoOrder(_id!, [for (final x in _photos) x.ref]);
+      if (mounted) showMessage(context, 'Cover photo changed.');
+    } catch (e) {
+      if (mounted) {
+        setState(() => _photos..clear()..addAll(before));
+        showError(context, e);
+      }
     }
   }
 
@@ -705,7 +735,7 @@ class _ListingWizardState extends State<ListingWizard> {
             maxLength: 200,
             textCapitalization: TextCapitalization.sentences,
             style: const TextStyle(fontSize: 17),
-            decoration: const InputDecoration(hintText: 'e.g. Opposite the main gate, behind the filling station'),
+            decoration: InputDecoration(hintText: 'e.g. Opposite the main gate, behind the filling station', suffixIcon: VoiceButton(controller: _landmark)),
           ),
           _h('Show it on the map', 'Optional. Students only see a rough area. The exact spot is shared only after you confirm their viewing.'),
           LocationPicker(initial: _pin, onChanged: (p) => setState(() => _pin = p)),
@@ -769,7 +799,7 @@ class _ListingWizardState extends State<ListingWizard> {
           maxLines: 3,
           maxLength: 1000,
           style: const TextStyle(fontSize: 17),
-          decoration: const InputDecoration(hintText: 'Write it here, with the amount'),
+          decoration: InputDecoration(hintText: 'Write it here, with the amount', suffixIcon: VoiceButton(controller: _fees)),
         ),
         _h('Shortest stay', 'Optional. In months.'),
         TextFormField(
@@ -830,7 +860,7 @@ class _ListingWizardState extends State<ListingWizard> {
             maxLines: 3,
             maxLength: 1000,
             style: const TextStyle(fontSize: 17),
-            decoration: const InputDecoration(labelText: 'Other rules (optional)', hintText: 'e.g. No loud music after 10pm'),
+            decoration: InputDecoration(labelText: 'Other rules (optional)', hintText: 'e.g. No loud music after 10pm', suffixIcon: VoiceButton(controller: _rules)),
           ),
           _h('Describe your place', 'A few sentences. What is it like to live there?'),
           TextFormField(
@@ -839,7 +869,7 @@ class _ListingWizardState extends State<ListingWizard> {
             maxLength: 4000,
             textCapitalization: TextCapitalization.sentences,
             style: const TextStyle(fontSize: 17),
-            decoration: const InputDecoration(hintText: 'The room, the compound, the neighbourhood…'),
+            decoration: InputDecoration(hintText: 'The room, the compound, the neighbourhood…', suffixIcon: VoiceButton(controller: _desc)),
             onChanged: (_) => setState(() {}),
             validator: (v) => (v ?? '').trim().length < 20 ? 'Please write at least 20 letters so students know what to expect' : null,
           ),
@@ -872,12 +902,21 @@ class _ListingWizardState extends State<ListingWizard> {
           children: [
             for (final p in _photos)
               Stack(fit: StackFit.expand, children: [
-                ClipRRect(
+                GestureDetector(
+                  onTap: _busy ? null : () => _photoMenu(p),
+                  child: ClipRRect(
                   borderRadius: BorderRadius.circular(CS.rSm),
                   child: p.bytes != null
                       ? Image.memory(p.bytes!, fit: BoxFit.cover)
                       : (p.ref.url != null ? Image.network(p.ref.url!, fit: BoxFit.cover) : Container(color: CS.surface, child: const Icon(Icons.image_outlined, color: CS.muted))),
+                  ),
                 ),
+                if (identical(_photos.first, p))
+                  Positioned(
+                    left: 4,
+                    bottom: 4,
+                    child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: CS.green, borderRadius: BorderRadius.circular(10)), child: const Text('Cover', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800))),
+                  ),
                 Positioned(
                   top: 2,
                   right: 2,
@@ -902,7 +941,7 @@ class _ListingWizardState extends State<ListingWizard> {
           ],
         ),
         const SizedBox(height: 8),
-        Text('${_photos.length} of $_maxPhotos. The first photo is the cover. Each photo up to 5 MB. Listings with 4 or more photos get more enquiries.', style: Theme.of(context).textTheme.bodySmall),
+        Text('${_photos.length} of $_maxPhotos. Tap a photo to choose the cover or remove it. Each photo up to 5 MB. Listings with 4 or more photos get more enquiries.', style: Theme.of(context).textTheme.bodySmall),
       ]);
 
   // ----------------------------------------------------------------- step 7

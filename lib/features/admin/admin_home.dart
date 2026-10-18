@@ -4,7 +4,9 @@ import '../../core/widgets/error_views.dart';
 import '../../data/admin_models.dart';
 import '../../data/repository.dart';
 import '../profile/profile_screen.dart';
+import 'admin_analytics.dart';
 import 'admin_extra.dart';
+import 'admin_schools.dart';
 import 'admin_reports.dart';
 import 'admin_review.dart';
 
@@ -119,6 +121,28 @@ class _OverviewState extends State<_Overview> {
                   subtitle: const Text('Every admin action, recorded'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AuditScreen())),
+                ),
+              ),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CS.rMd), side: const BorderSide(color: CS.line)),
+                child: ListTile(
+                  leading: const Icon(Icons.school_outlined, color: CS.blue),
+                  title: const Text('Schools', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('Add or correct schools'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SchoolsAdminScreen())),
+                ),
+              ),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(CS.rMd), side: const BorderSide(color: CS.line)),
+                child: ListTile(
+                  leading: const Icon(Icons.bar_chart, color: CS.blue),
+                  title: const Text('Analytics', style: TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: const Text('Listings, people and reports at a glance'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
                 ),
               ),
             ]),

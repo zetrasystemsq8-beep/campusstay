@@ -24,6 +24,8 @@ enum AppErrorKind {
   ownListing,
   blocked,
   fileTooLarge,
+  codeInvalid,
+  voiceUnavailable,
   locationOff,
   locationDenied,
   locationDeniedForever,
@@ -80,6 +82,7 @@ AppException _auth(AuthException e) {
   final m = e.message.toLowerCase();
   final s = e.statusCode ?? '';
   if (m.contains('invalid login')) return AppException(AppErrorKind.invalidLogin, cause: e);
+  if (m.contains('token') && (m.contains('expired') || m.contains('invalid'))) return AppException(AppErrorKind.codeInvalid, cause: e);
   if (m.contains('already registered') || m.contains('already been registered')) return AppException(AppErrorKind.emailTaken, cause: e);
   if (m.contains('email not confirmed')) return AppException(AppErrorKind.emailNotConfirmed, cause: e);
   if (m.contains('password should') || m.contains('weak password')) return AppException(AppErrorKind.weakPassword, cause: e);
@@ -101,6 +104,8 @@ AppException _postgrest(PostgrestException e) {
   if (m.contains('rate limit')) return AppException(AppErrorKind.tooManyRequests, cause: e);
   if (m.contains('listing not available')) return AppException(AppErrorKind.notAvailable, cause: e);
   if (m.contains('your own listing')) return AppException(AppErrorKind.ownListing, cause: e);
+  if (m.contains('invalid rating comment')) return AppException(AppErrorKind.invalid, detail: 'Keep your review under 1000 characters.', cause: e);
+  if (m.contains('invalid rating')) return AppException(AppErrorKind.invalid, detail: 'Choose 1 to 5 stars.', cause: e);
   if (m.contains('invalid message')) return AppException(AppErrorKind.invalid, detail: 'Messages must be 1 to 2000 characters.', cause: e);
   if (m.contains('unavailable')) return AppException(AppErrorKind.blocked, cause: e);
   if (m.contains('not allowed') || m.contains('forbidden')) return AppException(AppErrorKind.forbidden, cause: e);
@@ -156,6 +161,10 @@ ErrorInfo describe(Object error) {
       return const ErrorInfo("Message can't be sent", "This conversation isn't available.");
     case AppErrorKind.fileTooLarge:
       return const ErrorInfo('That file is a heavyweight', 'Photos must be under 5 MB and documents under 10 MB.');
+    case AppErrorKind.codeInvalid:
+      return const ErrorInfo("That code didn't work", 'It may have expired or been typed wrong. Ask for a new code and try again.');
+    case AppErrorKind.voiceUnavailable:
+      return ErrorInfo("Voice typing isn't available", e.detail ?? "This phone can't listen right now. Use the microphone on your keyboard instead, or type it.");
     case AppErrorKind.locationOff:
       return const ErrorInfo('Location is switched off', 'Turn on location (GPS) in your phone settings, then try again.');
     case AppErrorKind.locationDenied:

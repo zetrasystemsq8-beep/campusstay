@@ -28,6 +28,8 @@ abstract class LandlordRepository {
   Future<void> clearLocation(String propertyId);
   Future<Map<String, ListingStats>> listingStats();
   Future<void> setSpaces(String id, int spaces, {bool reopen = false});
+  Future<void> replyToReview(String reviewId, String reply);
+  Future<void> setPhotoOrder(String propertyId, List<PhotoRef> inOrder);
 }
 
 String _rid() => DateTime.now().microsecondsSinceEpoch.toRadixString(36) + Random().nextInt(1 << 30).toRadixString(36);
@@ -164,6 +166,12 @@ class SampleLandlordRepository implements LandlordRepository {
 
   @override
   Future<Map<String, ListingStats>> listingStats() async => {for (final l in _list) l.id: ListingStats(l.views, 0, 0, 0)};
+
+  @override
+  Future<void> replyToReview(String reviewId, String reply) async {}
+
+  @override
+  Future<void> setPhotoOrder(String propertyId, List<PhotoRef> inOrder) async => _get(propertyId).photos = [...inOrder];
 
   @override
   Future<void> setSpaces(String id, int spaces, {bool reopen = false}) async {
@@ -345,6 +353,18 @@ class SupabaseLandlordRepository implements LandlordRepository {
       for (final r in rows.cast<Map>())
         r['property_id'] as String: ListingStats((r['views'] as num).toInt(), (r['saves'] as num).toInt(), (r['enquiries'] as num).toInt(), (r['viewings'] as num).toInt()),
     };
+  }
+
+  @override
+  Future<void> replyToReview(String reviewId, String reply) async {
+    await _c.rpc('cs_reply_to_review', params: {'p_review_id': reviewId, 'p_reply': reply});
+  }
+
+  @override
+  Future<void> setPhotoOrder(String propertyId, List<PhotoRef> inOrder) async {
+    for (var i = 0; i < inOrder.length; i++) {
+      await _c.from('cs_property_photos').update({'sort_order': i}).eq('id', inOrder[i].id).eq('property_id', propertyId);
+    }
   }
 
   @override

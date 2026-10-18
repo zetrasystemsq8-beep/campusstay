@@ -10,6 +10,7 @@ import '../../data/models.dart';
 import '../../data/analytics.dart';
 import '../../core/launch.dart';
 import '../../core/share.dart';
+import 'reviews_widgets.dart';
 import '../../core/widgets/safety_widgets.dart';
 import '../../core/widgets/map_widgets.dart';
 import '../../core/widgets/property_details_widgets.dart';
@@ -192,6 +193,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       Text('House rules', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       RulesCard(extras: p.extras),
+                      const SizedBox(height: 20),
+                      ReviewsSection(propertyId: p.id),
                       const SizedBox(height: 20),
                       _ContactSection(propertyId: p.id),
                       const SizedBox(height: 16),

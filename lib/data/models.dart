@@ -72,6 +72,44 @@ class Property {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'area': area,
+        'university': university,
+        'rentNgn': rentNgn,
+        'rentPeriod': rentPeriod,
+        'roomType': roomType,
+        'distanceKm': distanceKm,
+        'verification': verification,
+        'amenities': amenities,
+        'photoUrls': photoUrls,
+        'extraFeesNote': extraFeesNote,
+        'extras': extras.toMap(),
+        'approxLat': approxLat,
+        'approxLng': approxLng,
+      };
+
+  factory Property.fromJson(Map<String, dynamic> j) => Property(
+        id: j['id'] as String,
+        title: j['title'] as String,
+        description: (j['description'] ?? '') as String,
+        area: (j['area'] ?? '') as String,
+        university: (j['university'] ?? '') as String,
+        rentNgn: (j['rentNgn'] as num).toInt(),
+        rentPeriod: (j['rentPeriod'] ?? 'year') as String,
+        roomType: j['roomType'] as String,
+        distanceKm: (j['distanceKm'] as num?)?.toDouble(),
+        verification: (j['verification'] ?? 'unverified') as String,
+        amenities: ((j['amenities'] as List?) ?? const []).cast<String>(),
+        photoUrls: ((j['photoUrls'] as List?) ?? const []).cast<String>(),
+        extraFeesNote: j['extraFeesNote'] as String?,
+        extras: PropertyExtras.fromMap(Map<String, dynamic>.from((j['extras'] as Map?) ?? const {})),
+        approxLat: (j['approxLat'] as num?)?.toDouble(),
+        approxLng: (j['approxLng'] as num?)?.toDouble(),
+      );
+
   String get rentLabel => '₦${formatNaira(rentNgn)}/${rentPeriod == 'month' ? 'month' : 'year'}';
   String get roomTypeLabel => roomTypeLabels[roomType] ?? roomType;
   String get school => university.isNotEmpty ? university : extras.schoolOther;
@@ -174,6 +212,21 @@ class SearchFilter {
           .where((b) => b)
           .length;
   bool get isActive => activeCount > 0;
+}
+
+class ReviewSummary {
+  final double average;
+  final int count;
+  const ReviewSummary(this.average, this.count);
+}
+
+class Review {
+  final String id, comment, reply;
+  final int rating;
+  final DateTime createdAt;
+  final DateTime? repliedAt;
+  final bool mine;
+  const Review(this.id, this.rating, this.comment, this.createdAt, this.mine, this.reply, this.repliedAt);
 }
 
 class SavedSearch {

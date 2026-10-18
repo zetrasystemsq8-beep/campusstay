@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import '../core/errors.dart';
+import 'offline_cache.dart';
 import 'admin_repository.dart';
 import 'admin_models.dart';
 import 'landlord_models.dart';
@@ -14,14 +15,37 @@ class GuardedRepository implements Repository {
   final Repository _r;
   GuardedRepository(this._r);
 
+  /// First page of the unfiltered list and saved listings keep a copy for when there is no signal.
+  /// Only a real network failure falls back to the copy; every other error is shown as it is.
+  Future<List<Property>> _withCache(String key, bool cacheable, Future<List<Property>> Function() fetch) async {
+    try {
+      final r = await Net.run(fetch);
+      if (cacheable) {
+        OfflineState.servingCache.value = false;
+        await PropertyCache.write(key, r);
+      }
+      return r;
+    } on AppException catch (e) {
+      if (cacheable && (e.kind == AppErrorKind.offline || e.kind == AppErrorKind.timeout)) {
+        final copy = await PropertyCache.read(key);
+        if (copy != null) {
+          OfflineState.servingCache.value = true;
+          return copy;
+        }
+      }
+      rethrow;
+    }
+  }
+
   @override
-  Future<List<Property>> search(SearchFilter f, {int page = 0}) => Net.run(() => _r.search(f, page: page));
+  Future<List<Property>> search(SearchFilter f, {int page = 0}) =>
+      _withCache('explore', page == 0 && f.query.isEmpty && !f.isActive, () => _r.search(f, page: page));
   @override
   Future<Property> property(String id) => Net.run(() => _r.property(id));
   @override
   Future<Set<String>> favouriteIds() => Net.run(() => _r.favouriteIds());
   @override
-  Future<List<Property>> favourites() => Net.run(() => _r.favourites());
+  Future<List<Property>> favourites() => _withCache('favourites', true, () => _r.favourites());
   @override
   Future<void> setFavourite(String propertyId, bool on) => Net.run(() => _r.setFavourite(propertyId, on));
   @override
@@ -49,6 +73,14 @@ class GuardedRepository implements Repository {
   Future<String> revealPhone(String propertyId) => Net.run(() => _r.revealPhone(propertyId));
   @override
   Future<String> replySpeed(String propertyId) => Net.run(() => _r.replySpeed(propertyId));
+  @override
+  Future<ReviewSummary> reviewSummary(String propertyId) => Net.run(() => _r.reviewSummary(propertyId));
+  @override
+  Future<List<Review>> reviews(String propertyId) => Net.run(() => _r.reviews(propertyId));
+  @override
+  Future<String> canReview(String propertyId) => Net.run(() => _r.canReview(propertyId));
+  @override
+  Future<void> submitReview(String propertyId, int rating, String comment) => Net.run(() => _r.submitReview(propertyId, rating, comment));
   @override
   Future<List<SavedSearch>> savedSearches() => Net.run(() => _r.savedSearches());
   @override
@@ -107,6 +139,10 @@ class GuardedLandlordRepository implements LandlordRepository {
   Future<Map<String, ListingStats>> listingStats() => Net.run(() => _r.listingStats());
   @override
   Future<void> setSpaces(String id, int spaces, {bool reopen = false}) => Net.run(() => _r.setSpaces(id, spaces, reopen: reopen));
+  @override
+  Future<void> replyToReview(String reviewId, String reply) => Net.run(() => _r.replyToReview(reviewId, reply));
+  @override
+  Future<void> setPhotoOrder(String propertyId, List<PhotoRef> inOrder) => Net.run(() => _r.setPhotoOrder(propertyId, inOrder), timeout: Net.upload);
 }
 
 class GuardedAdminRepository implements AdminRepository {
@@ -137,4 +173,11 @@ class GuardedAdminRepository implements AdminRepository {
   Future<void> setLeadStatus(String id, String status) => Net.run(() => _r.setLeadStatus(id, status));
   @override
   Future<List<AuditItem>> audit() => Net.run(() => _r.audit());
+  @override
+  Future<void> deleteReview(String id, String note) => Net.run(() => _r.deleteReview(id, note));
+  @override
+  Future<Map<String, List<(String, int)>>> breakdown() => Net.run(() => _r.breakdown());
+  @override
+  Future<void> saveSchool(String? id, String name, String shortName, String city, String state, String kind) =>
+      Net.run(() => _r.saveSchool(id, name, shortName, city, state, kind));
 }

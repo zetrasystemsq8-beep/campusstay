@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/state_views.dart';
@@ -5,6 +6,7 @@ import '../../core/errors.dart';
 import '../../core/safety.dart';
 import '../../core/widgets/safety_widgets.dart';
 import '../../core/widgets/error_views.dart';
+import '../../data/auth_service.dart';
 import '../../data/models.dart';
 import '../../data/repository.dart';
 
@@ -67,6 +69,32 @@ class _ThreadScreenState extends State<ThreadScreen> {
   final _c = TextEditingController();
   bool _sending = false;
   Set<SafetyFlag> _draftFlags = {};
+  bool _isLandlord = false;
+
+  static const _landlordReplies = [
+    'Yes, it is still available.',
+    'You can come and see it. When are you free?',
+    'Please tell me your preferred day and time.',
+    'The rent is as shown on the listing.',
+    'Sorry, it has been taken.',
+  ];
+  static const _studentReplies = [
+    'Is it still available?',
+    'Can I come and see it?',
+    'What is the total I pay to move in?',
+    'Is the rent negotiable?',
+    'Is there a prepaid meter?',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    AuthService.role().then((r) {
+      if (mounted) setState(() => _isLandlord = r == 'landlord' || r == 'agent');
+    }).catchError((Object e) {
+      debugPrint('role lookup for quick replies failed: ${classify(e)}'); // quick replies are optional
+    });
+  }
 
   Future<void> _send() async {
     final t = _c.text.trim();
@@ -180,6 +208,23 @@ class _ThreadScreenState extends State<ThreadScreen> {
               padding: EdgeInsets.fromLTRB(CS.s12, CS.s8, CS.s12, CS.s8 + MediaQuery.of(context).viewInsets.bottom),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 SafetyBanner(flags: _draftFlags),
+                SizedBox(
+                  height: 44,
+                  child: ListView(scrollDirection: Axis.horizontal, children: [
+                    for (final t in (_isLandlord ? _landlordReplies : _studentReplies))
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8, bottom: 6),
+                        child: ActionChip(
+                          label: Text(t, style: const TextStyle(fontSize: 13)),
+                          onPressed: () => setState(() {
+                            _c.text = t;
+                            _c.selection = TextSelection.collapsed(offset: t.length);
+                            _draftFlags = SafetyCheck.scan(t);
+                          }),
+                        ),
+                      ),
+                  ]),
+                ),
                 Row(children: [
                   Expanded(
                     child: TextField(

@@ -4,6 +4,7 @@ import 'map_screen.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
+import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/school_picker.dart';
 import '../../core/widgets/state_views.dart';
@@ -186,6 +187,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               child: TextButton.icon(onPressed: _saveSearch, icon: const Icon(Icons.bookmark_add_outlined, size: 20), label: const Text('Save this search')),
             ),
           ),
+        const OfflineBanner(),
         Expanded(child: _body()),
       ]);
 

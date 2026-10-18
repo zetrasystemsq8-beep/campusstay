@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/config.dart';
+import '../../core/errors.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/logo.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/auth_service.dart';
 import '../shell/gate.dart';
+import '../legal/legal_screens.dart';
+import 'reset_password_screen.dart';
 import 'role_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -27,6 +30,7 @@ class _AuthScreenState extends State<AuthScreen> {
   late final bool _roleChosen = widget.startInSignUp;
   bool _busy = false;
   bool _hide = true;
+  bool _agree = false;
 
   void _toggleMode() {
     // Someone who opened "I already have an account" never saw the role choice.
@@ -50,6 +54,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
+    if (_signUp && !_agree) {
+      showError(context, const AppException(AppErrorKind.invalid, detail: 'Please tick the box to accept the Terms of use and Privacy policy.'));
+      return;
+    }
     if (AppConfig.devMode) {
       AuthService.startDemo(widget.role);
       _enter();
@@ -77,23 +85,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  Future<void> _forgot() async {
-    final email = _email.text.trim();
-    if (!email.contains('@')) {
-      showMessage(context, 'Enter your email above first.', error: true);
-      return;
-    }
-    if (AppConfig.devMode) {
-      showMessage(context, 'Password reset needs Supabase to be configured.');
-      return;
-    }
-    try {
-      await AuthService.resetPassword(email);
-      if (mounted) showMessage(context, 'If that email has an account, a reset link is on its way.');
-    } catch (e) {
-      if (mounted) showError(context, e);
-    }
-  }
+  void _forgot() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ResetPasswordScreen(initialEmail: _email.text.trim())));
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -144,6 +136,25 @@ class _AuthScreenState extends State<AuthScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(onPressed: _forgot, child: const Text('Forgot password?')),
+                  ),
+                if (_signUp)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Checkbox(value: _agree, onChanged: (v) => setState(() => _agree = v ?? false)),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Wrap(children: [
+                            const Text('I agree to the '),
+                            GestureDetector(onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TermsScreen())), child: const Text('Terms of use', style: TextStyle(color: CS.blue, fontWeight: FontWeight.w700))),
+                            const Text(' and '),
+                            GestureDetector(onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen())), child: const Text('Privacy policy', style: TextStyle(color: CS.blue, fontWeight: FontWeight.w700))),
+                            const Text('.'),
+                          ]),
+                        ),
+                      ),
+                    ]),
                   ),
                 const SizedBox(height: 16),
                 PrimaryButton(

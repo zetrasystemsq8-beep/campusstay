@@ -61,6 +61,19 @@ class SampleRepository implements Repository {
   Future<String> replySpeed(String propertyId) async => 'unknown';
 
   @override
+  Future<ReviewSummary> reviewSummary(String propertyId) async => const ReviewSummary(0, 0);
+
+  @override
+  Future<List<Review>> reviews(String propertyId) async => [];
+
+  @override
+  Future<String> canReview(String propertyId) async => 'no';
+
+  @override
+  Future<void> submitReview(String propertyId, int rating, String comment) async =>
+      throw const AppException(AppErrorKind.forbidden);
+
+  @override
   Future<List<SavedSearch>> savedSearches() async => [..._searches];
 
   @override

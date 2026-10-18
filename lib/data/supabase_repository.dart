@@ -60,6 +60,30 @@ class SupabaseRepository implements Repository {
   Future<String> contactStatus(String propertyId) async => (await _c.rpc('cs_contact_status', params: {'p_property_id': propertyId})) as String;
 
   @override
+  Future<ReviewSummary> reviewSummary(String propertyId) async {
+    final r = await _c.rpc('cs_review_summary', params: {'p_property_id': propertyId}) as Map;
+    return ReviewSummary((r['avg'] as num).toDouble(), (r['count'] as num).toInt());
+  }
+
+  @override
+  Future<List<Review>> reviews(String propertyId) async {
+    final rows = await _c.rpc('cs_property_reviews', params: {'p_property_id': propertyId}) as List;
+    return rows
+        .cast<Map>()
+        .map<Review>((r) => Review(r['id'] as String, (r['rating'] as num).toInt(), (r['comment'] ?? '') as String, DateTime.parse(r['created_at'] as String).toLocal(),
+            r['mine'] as bool, (r['reply'] ?? '') as String, r['replied_at'] == null ? null : DateTime.parse(r['replied_at'] as String).toLocal()))
+        .toList();
+  }
+
+  @override
+  Future<String> canReview(String propertyId) async => (await _c.rpc('cs_can_review', params: {'p_property_id': propertyId})) as String;
+
+  @override
+  Future<void> submitReview(String propertyId, int rating, String comment) async {
+    await _c.rpc('cs_submit_review', params: {'p_property_id': propertyId, 'p_rating': rating, 'p_comment': comment});
+  }
+
+  @override
   Future<String> replySpeed(String propertyId) async => (await _c.rpc('cs_reply_speed', params: {'p_property_id': propertyId})) as String;
 
   @override

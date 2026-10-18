@@ -48,6 +48,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }, 'Account suspended and report closed.');
   }
 
+  Future<void> _removeReview(AdminReport r) async {
+    final note = await askNote(context, title: 'Remove this review?', action: 'Remove', hint: 'Reason (recorded in the audit log)');
+    if (note == null) return;
+    await _run(() async {
+      await Services.admin.deleteReview(r.targetId, note);
+      await Services.admin.resolveReport(r.id, 'actioned', 'Review removed: $note');
+    }, 'Review removed and report closed.');
+  }
+
   Future<void> _dismiss(AdminReport r) async {
     final note = await askNote(context, title: 'Dismiss this report', action: 'Dismiss', hint: 'Why is no action needed?');
     if (note == null) return;
@@ -104,6 +113,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 ),
                                 OutlinedButton(style: OutlinedButton.styleFrom(foregroundColor: CS.danger), onPressed: () => _removeListing(r), child: const Text('Remove listing')),
                               ],
+                              if (r.targetType == 'review') OutlinedButton(style: OutlinedButton.styleFrom(foregroundColor: CS.danger), onPressed: () => _removeReview(r), child: const Text('Remove review')),
                               if (r.targetType == 'user') OutlinedButton(style: OutlinedButton.styleFrom(foregroundColor: CS.danger), onPressed: () => _suspend(r), child: const Text('Suspend user')),
                               TextButton(onPressed: () => _dismiss(r), child: const Text('Dismiss')),
                             ]),

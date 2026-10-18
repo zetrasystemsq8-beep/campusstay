@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/errors.dart';
 import '../../core/widgets/error_views.dart';
+import '../../core/widgets/offline_banner.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/property_widgets.dart';
 import '../../core/widgets/state_views.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
           await _featured;
         },
         child: ListView(padding: const EdgeInsets.all(CS.s16), children: [
+          const OfflineBanner(),
           Text('Find your space', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 4),
           Text('Search by school, town or area.', style: Theme.of(context).textTheme.bodySmall),

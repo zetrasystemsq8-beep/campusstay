@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config.dart';
+import 'offline_cache.dart';
 import '../core/errors.dart';
+import '../features/legal/legal_screens.dart';
 
 class AuthService {
   static bool _demoSignedIn = false;
@@ -30,7 +32,7 @@ class AuthService {
     final res = await Net.run(() => Supabase.instance.client.auth.signUp(
           email: email,
           password: password,
-          data: {'role': role, 'full_name': name},
+          data: {'role': role, 'full_name': name, 'terms_version': kTermsVersion},
         ));
     return res.session != null; // false => email confirmation required
   }
@@ -41,8 +43,20 @@ class AuthService {
   static Future<void> resetPassword(String email) =>
       Net.run(() => Supabase.instance.client.auth.resetPasswordForEmail(email));
 
+  /// Sends a one-time code to the email. The email template in Supabase must contain {{ .Token }}.
+  static Future<void> sendResetCode(String email) => Net.run(() => Supabase.instance.client.auth.resetPasswordForEmail(email));
+
+  /// Proves the code, sets the new password, then signs out so the person logs in fresh.
+  static Future<void> resetWithCode(String email, String code, String newPassword) => Net.run(() async {
+        final c = Supabase.instance.client;
+        await c.auth.verifyOTP(email: email, token: code, type: OtpType.recovery);
+        await c.auth.updateUser(UserAttributes(password: newPassword));
+        await c.auth.signOut();
+      });
+
   static Future<void> signOut() async {
     _demoSignedIn = false;
+    await PropertyCache.clear();
     if (!AppConfig.devMode) await Net.run(() => Supabase.instance.client.auth.signOut());
   }
 }
