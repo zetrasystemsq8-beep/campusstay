@@ -60,6 +60,40 @@ class SupabaseRepository implements Repository {
   Future<String> contactStatus(String propertyId) async => (await _c.rpc('cs_contact_status', params: {'p_property_id': propertyId})) as String;
 
   @override
+  Future<String> replySpeed(String propertyId) async => (await _c.rpc('cs_reply_speed', params: {'p_property_id': propertyId})) as String;
+
+  @override
+  Future<List<SavedSearch>> savedSearches() async {
+    final rows = await _c.from('cs_saved_searches').select('id,name,filter,last_seen_at').eq('user_id', _uid).order('created_at');
+    return rows
+        .map<SavedSearch>((r) => SavedSearch(r['id'] as String, r['name'] as String, SearchFilter.fromJson(Map<String, dynamic>.from(r['filter'] as Map)),
+            DateTime.parse(r['last_seen_at'] as String)))
+        .toList();
+  }
+
+  @override
+  Future<void> saveSearch(String name, SearchFilter f) async {
+    await _c.from('cs_saved_searches').insert({'user_id': _uid, 'name': name, 'filter': f.toJson()});
+  }
+
+  @override
+  Future<void> deleteSavedSearch(String id) async {
+    await _c.from('cs_saved_searches').delete().eq('id', id).eq('user_id', _uid);
+  }
+
+  /// Listings approved since you last looked. Capped at 10 to keep it light ("9+" on screen).
+  @override
+  Future<int> countNewMatches(SavedSearch s) async {
+    final rows = await _filtered(s.filter).gt('approved_at', s.lastSeenAt.toUtc().toIso8601String()).limit(10);
+    return rows.length;
+  }
+
+  @override
+  Future<void> markSearchSeen(String id) async {
+    await _c.from('cs_saved_searches').update({'last_seen_at': DateTime.now().toUtc().toIso8601String()}).eq('id', id).eq('user_id', _uid);
+  }
+
+  @override
   Future<String> revealPhone(String propertyId) async => (await _c.rpc('cs_reveal_contact', params: {'p_property_id': propertyId})) as String;
 
   @override

@@ -43,11 +43,12 @@ jobs:
           TERMS_URL: ${{ secrets.TERMS_URL }}
           PRIVACY_URL: ${{ secrets.PRIVACY_URL }}
           MAP_TILE_URL: ${{ secrets.MAP_TILE_URL }}
+          APP_LINK: ${{ secrets.APP_LINK }}
           MAP_ATTRIBUTION: ${{ secrets.MAP_ATTRIBUTION }}
         run: |
           ARGS=(--dart-define=SUPABASE_URL="$SUPABASE_URL" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY")
           # Optional settings are passed only when set, so the app's built-in defaults apply otherwise.
-          for NAME in SUPPORT_EMAIL SUPPORT_WHATSAPP TERMS_URL PRIVACY_URL MAP_TILE_URL MAP_ATTRIBUTION; do
+          for NAME in APP_LINK SUPPORT_EMAIL SUPPORT_WHATSAPP TERMS_URL PRIVACY_URL MAP_TILE_URL MAP_ATTRIBUTION; do
             VALUE="${!NAME}"
             if [ -n "$VALUE" ]; then ARGS+=(--dart-define="$NAME=$VALUE"); fi
           done

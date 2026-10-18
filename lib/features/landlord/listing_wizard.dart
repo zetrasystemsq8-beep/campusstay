@@ -92,7 +92,7 @@ class _ListingWizardState extends State<ListingWizard> {
   String? _roomType;
   double? _distanceKm; // kept from older listings; new listings use walking time instead
   int? _walk;
-  int _bedrooms = 1, _bathrooms = 1, _occupants = 1;
+  int _bedrooms = 1, _bathrooms = 1, _occupants = 1, _spaces = 1;
   String _bathroomType = 'private', _kitchenType = 'shared', _furnishing = 'unfurnished', _gender = 'any';
   String? _electricity, _water;
   DateTime? _availableFrom;
@@ -137,6 +137,7 @@ class _ListingWizardState extends State<ListingWizard> {
     _bedrooms = x.bedrooms;
     _bathrooms = x.bathrooms;
     _occupants = x.maxOccupants;
+    _spaces = x.spacesAvailable ?? 1;
     _bathroomType = x.bathroomType;
     _kitchenType = x.kitchenType;
     _furnishing = x.furnishing;
@@ -202,6 +203,7 @@ class _ListingWizardState extends State<ListingWizard> {
         busFareNgn: _n(_bus),
         electricityBilling: _electricity,
         waterBilling: _water,
+        spacesAvailable: _spaces,
       );
 
   ListingInput _input() => ListingInput(
@@ -724,6 +726,7 @@ class _ListingWizardState extends State<ListingWizard> {
         _counter('Bedrooms', _bedrooms, 0, 20, (v) => _bedrooms = v, hint: '0 means a bed space or a single room'),
         _counter('Bathrooms', _bathrooms, 0, 20, (v) => _bathrooms = v),
         _counter('Most people allowed', _occupants, 1, 30, (v) => _occupants = v, hint: 'Counting everyone who will live there'),
+        _counter('Rooms or bed spaces to rent', _spaces, 1, 200, (v) => _spaces = v, hint: 'Use 1 if it is just one room. For a hostel, count the free bed spaces.'),
         _h('The bathroom is…', 'Private means only your tenant uses it.'),
         _choices(const {'private': 'Private', 'shared': 'Shared'}, _bathroomType, (v) => _bathroomType = v),
         _h('The kitchen is…'),

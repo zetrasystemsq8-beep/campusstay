@@ -141,11 +141,46 @@ class SearchFilter {
         amenities: amenities,
       );
 
+  Map<String, dynamic> toJson() => {
+        'query': query,
+        if (minRent != null) 'minRent': minRent,
+        if (maxRent != null) 'maxRent': maxRent,
+        if (roomType != null) 'roomType': roomType,
+        if (universityId != null) 'universityId': universityId,
+        if (schoolName != null) 'schoolName': schoolName,
+        if (furnishing != null) 'furnishing': furnishing,
+        if (forGender != null) 'forGender': forGender,
+        if (minBedrooms != null) 'minBedrooms': minBedrooms,
+        if (maxWalk != null) 'maxWalk': maxWalk,
+        'amenities': amenities.toList(),
+      };
+
+  factory SearchFilter.fromJson(Map<String, dynamic> j) => SearchFilter(
+        query: (j['query'] ?? '') as String,
+        minRent: (j['minRent'] as num?)?.toInt(),
+        maxRent: (j['maxRent'] as num?)?.toInt(),
+        roomType: j['roomType'] as String?,
+        universityId: j['universityId'] as String?,
+        schoolName: j['schoolName'] as String?,
+        furnishing: j['furnishing'] as String?,
+        forGender: j['forGender'] as String?,
+        minBedrooms: (j['minBedrooms'] as num?)?.toInt(),
+        maxWalk: (j['maxWalk'] as num?)?.toInt(),
+        amenities: {...((j['amenities'] as List?) ?? const []).cast<String>()},
+      );
+
   int get activeCount =>
       [minRent != null || maxRent != null, roomType != null, universityId != null, furnishing != null, forGender != null, minBedrooms != null, maxWalk != null, amenities.isNotEmpty]
           .where((b) => b)
           .length;
   bool get isActive => activeCount > 0;
+}
+
+class SavedSearch {
+  final String id, name;
+  final SearchFilter filter;
+  final DateTime lastSeenAt;
+  const SavedSearch(this.id, this.name, this.filter, this.lastSeenAt);
 }
 
 class Conversation {

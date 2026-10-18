@@ -26,6 +26,12 @@ abstract class Repository {
   Future<ExactLocation?> exactLocation(String propertyId);
   Future<String> contactStatus(String propertyId);
   Future<String> revealPhone(String propertyId);
+  Future<String> replySpeed(String propertyId);
+  Future<List<SavedSearch>> savedSearches();
+  Future<void> saveSearch(String name, SearchFilter f);
+  Future<void> deleteSavedSearch(String id);
+  Future<int> countNewMatches(SavedSearch s);
+  Future<void> markSearchSeen(String id);
 }
 
 class Services {

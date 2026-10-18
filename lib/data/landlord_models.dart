@@ -134,6 +134,11 @@ class LandlordListing {
   String get roomTypeLabel => roomTypeLabels[roomType] ?? roomType;
 }
 
+class ListingStats {
+  final int views, saves, enquiries, viewings;
+  const ListingStats(this.views, this.saves, this.enquiries, this.viewings);
+}
+
 class DashboardStats {
   final int total, active, pending, views, enquiries;
   const DashboardStats(this.total, this.active, this.pending, this.views, this.enquiries);

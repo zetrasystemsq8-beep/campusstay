@@ -7,6 +7,7 @@ import 'repository.dart';
 /// properties, and none are marked verified.
 class SampleRepository implements Repository {
   final _favs = <String>{};
+  final _searches = <SavedSearch>[];
   final _convs = <Conversation>[];
   final _msgs = <String, List<ChatMessage>>{};
 
@@ -55,6 +56,24 @@ class SampleRepository implements Repository {
 
   @override
   Future<String> contactStatus(String propertyId) async => ContactStatus.hidden;
+
+  @override
+  Future<String> replySpeed(String propertyId) async => 'unknown';
+
+  @override
+  Future<List<SavedSearch>> savedSearches() async => [..._searches];
+
+  @override
+  Future<void> saveSearch(String name, SearchFilter f) async => _searches.add(SavedSearch('s${_searches.length + 1}', name, f, DateTime.now()));
+
+  @override
+  Future<void> deleteSavedSearch(String id) async => _searches.removeWhere((s) => s.id == id);
+
+  @override
+  Future<int> countNewMatches(SavedSearch s) async => 0;
+
+  @override
+  Future<void> markSearchSeen(String id) async {}
 
   @override
   Future<String> revealPhone(String propertyId) async =>

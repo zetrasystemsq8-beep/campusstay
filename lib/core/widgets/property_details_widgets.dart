@@ -38,6 +38,7 @@ class PropertyFacts extends StatelessWidget {
       _Fact(Icons.chair_outlined, furnishingLabels[e.furnishing] ?? ''),
       _Fact(Icons.people_outline, e.maxOccupants == 1 ? 'For 1 person' : 'Up to ${e.maxOccupants} people'),
       if (e.genderPreference != 'any') _Fact(Icons.wc, genderLabels[e.genderPreference] ?? '', highlight: true),
+      if (e.spacesAvailable != null && e.spacesAvailable! > 1) _Fact(Icons.meeting_room_outlined, '${e.spacesAvailable} spaces available', highlight: true),
       if (e.walkMinutes != null) _Fact(Icons.directions_walk, '${e.walkMinutes} min walk to school', highlight: true),
       if (e.availableFrom != null) _Fact(Icons.event_available_outlined, 'Available from ${fmtDate(e.availableFrom!)}'),
       if (e.leaseMonths != null) _Fact(Icons.schedule, 'Minimum stay ${e.leaseMonths} month${e.leaseMonths == 1 ? '' : 's'}'),

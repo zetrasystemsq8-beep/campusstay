@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/errors.dart';
+import '../../core/safety.dart';
+import '../../core/widgets/safety_widgets.dart';
 import '../../core/widgets/error_views.dart';
 import '../../data/models.dart';
 import '../../data/repository.dart';
@@ -64,6 +66,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   late Future<List<ChatMessage>> _f = Services.repo.messages(widget.conversation.id);
   final _c = TextEditingController();
   bool _sending = false;
+  Set<SafetyFlag> _draftFlags = {};
 
   Future<void> _send() async {
     final t = _c.text.trim();
@@ -72,6 +75,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
     try {
       await Services.repo.sendMessage(widget.conversation.id, t);
       _c.clear();
+      _draftFlags = {};
       setState(() => _f = Services.repo.messages(widget.conversation.id));
     } catch (e) {
       if (mounted) {
@@ -154,7 +158,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
                 if (s.hasError) return ErrorView(error: s.error!, onRetry: () => setState(() => _f = Services.repo.messages(widget.conversation.id)));
                 return ListView(padding: const EdgeInsets.all(CS.s16), children: [
-                  for (final m in s.data!)
+                  for (final m in s.data!) ...[
                     Align(
                       alignment: m.mine ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
@@ -165,6 +169,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
                         child: Text(m.body, style: TextStyle(color: m.mine ? Colors.white : CS.ink, fontSize: 15)),
                       ),
                     ),
+                    if (!m.mine) SafetyBanner(flags: SafetyCheck.scan(m.body), onReport: widget.conversation.otherUserId == null ? null : _reportPerson),
+                  ],
                 ]);
               },
             ),
@@ -172,10 +178,21 @@ class _ThreadScreenState extends State<ThreadScreen> {
           SafeArea(
             child: Padding(
               padding: EdgeInsets.fromLTRB(CS.s12, CS.s8, CS.s12, CS.s8 + MediaQuery.of(context).viewInsets.bottom),
-              child: Row(children: [
-                Expanded(child: TextField(controller: _c, maxLength: 2000, buildCounter: (c, {required currentLength, required isFocused, maxLength}) => null, decoration: const InputDecoration(hintText: 'Write a message'))),
-                const SizedBox(width: 8),
-                IconButton.filled(onPressed: _sending ? null : _send, tooltip: 'Send', icon: const Icon(Icons.send)),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                SafetyBanner(flags: _draftFlags),
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _c,
+                      maxLength: 2000,
+                      onChanged: (v) => setState(() => _draftFlags = SafetyCheck.scan(v)),
+                      buildCounter: (c, {required currentLength, required isFocused, maxLength}) => null,
+                      decoration: const InputDecoration(hintText: 'Write a message'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(onPressed: _sending ? null : _send, tooltip: 'Send', icon: const Icon(Icons.send)),
+                ]),
               ]),
             ),
           ),

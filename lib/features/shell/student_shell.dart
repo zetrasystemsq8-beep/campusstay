@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/widgets/error_views.dart';
 import '../../data/favourites_store.dart';
+import '../../data/models.dart';
 import '../explore/explore_screen.dart';
 import '../explore/saved_screen.dart';
 import '../home/home_screen.dart';
@@ -15,7 +16,7 @@ class StudentShell extends StatefulWidget {
 
 class _StudentShellState extends State<StudentShell> {
   int _tab = 0;
-  String _query = '';
+  SearchFilter _filter = const SearchFilter();
   int _exploreKey = 0;
 
   @override
@@ -36,8 +37,10 @@ class _StudentShellState extends State<StudentShell> {
     super.dispose();
   }
 
-  void _search(String q) => setState(() {
-        _query = q;
+  void _search(String q) => _openFilter(SearchFilter(query: q));
+
+  void _openFilter(SearchFilter f) => setState(() {
+        _filter = f;
         _exploreKey++;
         _tab = 1;
       });
@@ -45,8 +48,8 @@ class _StudentShellState extends State<StudentShell> {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      HomeScreen(onSearch: _search, onViewAll: () => _search('')),
-      ExploreScreen(key: ValueKey(_exploreKey), initialQuery: _query),
+      HomeScreen(onSearch: _search, onViewAll: () => _search(''), onOpenFilter: _openFilter),
+      ExploreScreen(key: ValueKey(_exploreKey), initialFilter: _filter),
       const SavedScreen(),
       const MessagesScreen(),
       const ProfileScreen(),

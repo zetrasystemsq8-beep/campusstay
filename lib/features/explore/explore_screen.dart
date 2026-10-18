@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/errors.dart';
 import 'map_screen.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
@@ -12,15 +13,15 @@ import '../../data/repository.dart';
 import '../property/property_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
-  final String initialQuery;
-  const ExploreScreen({super.key, this.initialQuery = ''});
+  final SearchFilter initialFilter;
+  const ExploreScreen({super.key, this.initialFilter = const SearchFilter()});
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  late SearchFilter _filter = SearchFilter(query: widget.initialQuery);
-  late final _search = TextEditingController(text: widget.initialQuery);
+  late SearchFilter _filter = widget.initialFilter;
+  late final _search = TextEditingController(text: widget.initialFilter.query);
   final _items = <Property>[];
   final _scroll = ScrollController();
   int _page = 0;
@@ -88,6 +89,52 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
+  String get _suggestedName {
+    final parts = <String>[
+      if (_filter.roomType != null) roomTypeLabels[_filter.roomType] ?? '',
+      if (_filter.schoolName != null) 'near ${_filter.schoolName}',
+      if (_filter.query.isNotEmpty) _filter.query,
+      if (_filter.maxRent != null) 'under ₦${formatNaira(_filter.maxRent!)}',
+    ].where((e) => e.isNotEmpty).toList();
+    return parts.isEmpty ? 'My search' : parts.join(' ');
+  }
+
+  Future<void> _saveSearch() async {
+    final c = TextEditingController(text: _suggestedName);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save this search'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          TextField(controller: c, maxLength: 60, decoration: const InputDecoration(labelText: 'Name')),
+          const Text('We will show how many new matching places appear, on your home screen.', style: TextStyle(color: CS.muted, fontSize: 13)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final t = c.text.trim();
+              if (t.isNotEmpty) Navigator.pop(ctx, t);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    c.dispose();
+    if (name == null || !mounted) return;
+    try {
+      final existing = await Services.repo.savedSearches();
+      if (existing.length >= 10) {
+        throw const AppException(AppErrorKind.invalid, detail: 'You can keep up to 10 saved searches. Delete one on the Home screen first.');
+      }
+      await Services.repo.saveSearch(name, _filter);
+      if (mounted) showMessage(context, 'Saved. Look for it on your Home screen.');
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
   Future<void> _openFilters() async {
     final f = await showModalBottomSheet<SearchFilter>(
       context: context,
@@ -131,6 +178,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ]),
         ),
+        if (_filter.query.isNotEmpty || _filter.isActive)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: CS.s8),
+              child: TextButton.icon(onPressed: _saveSearch, icon: const Icon(Icons.bookmark_add_outlined, size: 20), label: const Text('Save this search')),
+            ),
+          ),
         Expanded(child: _body()),
       ]);
 

@@ -9,6 +9,8 @@ import '../../data/favourites_store.dart';
 import '../../data/models.dart';
 import '../../data/analytics.dart';
 import '../../core/launch.dart';
+import '../../core/share.dart';
+import '../../core/widgets/safety_widgets.dart';
 import '../../core/widgets/map_widgets.dart';
 import '../../core/widgets/property_details_widgets.dart';
 import '../../data/location_models.dart';
@@ -37,7 +39,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     super.dispose();
   }
 
+  static bool _safetyShown = false; // once per app session
+
   Future<void> _enquire(Property p) async {
+    if (!_safetyShown) {
+      if (!await showSafetyTips(context) || !mounted) return;
+      _safetyShown = true;
+    }
     final text = await _askText(context, title: 'Message the landlord', hint: 'Hello, is this room still available?', action: 'Send');
     if (text == null || !mounted) return;
     try {
@@ -112,6 +120,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         child: Row(children: [
                           CircleAvatar(backgroundColor: Colors.white, child: IconButton(tooltip: 'Back', icon: const Icon(Icons.arrow_back, color: CS.ink), onPressed: () => Navigator.pop(context))),
                           const Spacer(),
+                          CircleAvatar(backgroundColor: Colors.white, child: IconButton(tooltip: 'Share', icon: const Icon(Icons.share_outlined, color: CS.ink), onPressed: () => shareListing(context, p))),
+                          const SizedBox(width: 8),
                           ValueListenableBuilder<Set<String>>(
                             valueListenable: FavouritesStore.ids,
                             builder: (c, favs, _) => CircleAvatar(
@@ -145,6 +155,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       Text(p.rentLabel, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: CS.blue)),
                       const SizedBox(height: 10),
                       VerificationBadge(p.verification),
+                      _ReplySpeed(propertyId: p.id),
                       if (p.verification != 'verified')
                         const Padding(
                           padding: EdgeInsets.only(top: 6),
@@ -183,6 +194,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       RulesCard(extras: p.extras),
                       const SizedBox(height: 20),
                       _ContactSection(propertyId: p.id),
+                      const SizedBox(height: 16),
+                      const SafetyChecklist(),
                       const SizedBox(height: 16),
                       TextButton.icon(onPressed: () => _report(p), icon: const Icon(Icons.flag_outlined, size: 18), label: const Text('Report this listing')),
                     ]),
@@ -338,6 +351,44 @@ class _ContactSectionState extends State<_ContactSection> {
             default:
               return const SizedBox.shrink();
           }
+        },
+      );
+}
+
+
+/// "Usually replies within an hour": a rough bucket worked out on the server from real replies.
+class _ReplySpeed extends StatefulWidget {
+  final String propertyId;
+  const _ReplySpeed({required this.propertyId});
+  @override
+  State<_ReplySpeed> createState() => _ReplySpeedState();
+}
+
+class _ReplySpeedState extends State<_ReplySpeed> {
+  late final Future<String> _f = Services.repo.replySpeed(widget.propertyId);
+
+  static const _text = {
+    'within_hour': 'Usually replies within an hour',
+    'within_hours': 'Usually replies within a few hours',
+    'within_day': 'Usually replies within a day',
+    'slow': 'Can take a few days to reply',
+  };
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<String>(
+        future: _f,
+        builder: (c, s) {
+          if (s.hasError) {
+            // Optional extra: never blocks the page, but the cause is not hidden.
+            debugPrint('reply speed unavailable: ${classify(s.error!)}');
+            return const SizedBox.shrink();
+          }
+          final t = _text[s.data];
+          if (t == null) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(children: [const Icon(Icons.bolt, size: 16, color: CS.green), const SizedBox(width: 4), Text(t, style: const TextStyle(color: CS.green, fontWeight: FontWeight.w700, fontSize: 13))]),
+          );
         },
       );
 }

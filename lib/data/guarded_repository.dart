@@ -47,6 +47,18 @@ class GuardedRepository implements Repository {
   Future<String> contactStatus(String propertyId) => Net.run(() => _r.contactStatus(propertyId));
   @override
   Future<String> revealPhone(String propertyId) => Net.run(() => _r.revealPhone(propertyId));
+  @override
+  Future<String> replySpeed(String propertyId) => Net.run(() => _r.replySpeed(propertyId));
+  @override
+  Future<List<SavedSearch>> savedSearches() => Net.run(() => _r.savedSearches());
+  @override
+  Future<void> saveSearch(String name, SearchFilter f) => Net.run(() => _r.saveSearch(name, f));
+  @override
+  Future<void> deleteSavedSearch(String id) => Net.run(() => _r.deleteSavedSearch(id));
+  @override
+  Future<int> countNewMatches(SavedSearch s) => Net.run(() => _r.countNewMatches(s));
+  @override
+  Future<void> markSearchSeen(String id) => Net.run(() => _r.markSearchSeen(id));
 }
 
 class GuardedLandlordRepository implements LandlordRepository {
@@ -91,6 +103,10 @@ class GuardedLandlordRepository implements LandlordRepository {
   Future<void> saveLocation(String propertyId, double lat, double lng, String addressLine) => Net.run(() => _r.saveLocation(propertyId, lat, lng, addressLine));
   @override
   Future<void> clearLocation(String propertyId) => Net.run(() => _r.clearLocation(propertyId));
+  @override
+  Future<Map<String, ListingStats>> listingStats() => Net.run(() => _r.listingStats());
+  @override
+  Future<void> setSpaces(String id, int spaces, {bool reopen = false}) => Net.run(() => _r.setSpaces(id, spaces, reopen: reopen));
 }
 
 class GuardedAdminRepository implements AdminRepository {

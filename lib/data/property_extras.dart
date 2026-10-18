@@ -2,7 +2,7 @@
 /// the landlord view and the add-property flow.
 const kExtrasColumns = 'school_other,landmark,bedrooms,bathrooms,bathroom_type,kitchen_type,furnishing,gender_preference,'
     'max_occupants,available_from,lease_months,allows_instalments,caution_fee_ngn,service_charge_ngn,'
-    'landlord_lives_on_site,visitors_allowed,pets_allowed,house_rules,walk_minutes,bike_fare_ngn,keke_fare_ngn,bus_fare_ngn,electricity_billing,water_billing';
+    'landlord_lives_on_site,visitors_allowed,pets_allowed,house_rules,walk_minutes,bike_fare_ngn,keke_fare_ngn,bus_fare_ngn,electricity_billing,water_billing,spaces_available';
 
 const furnishingLabels = {'unfurnished': 'Unfurnished', 'semi_furnished': 'Semi-furnished', 'furnished': 'Furnished'};
 const genderLabels = {'any': 'Anyone', 'male_only': 'Male students only', 'female_only': 'Female students only'};
@@ -16,6 +16,7 @@ class PropertyExtras {
   final int bedrooms, bathrooms, maxOccupants;
   final int? leaseMonths, cautionFeeNgn, serviceChargeNgn, walkMinutes, bikeFareNgn, kekeFareNgn, busFareNgn;
   final String? electricityBilling, waterBilling;
+  final int? spacesAvailable;
   final DateTime? availableFrom;
   final bool allowsInstalments, landlordLivesOnSite, visitorsAllowed, petsAllowed;
 
@@ -44,6 +45,7 @@ class PropertyExtras {
     this.busFareNgn,
     this.electricityBilling,
     this.waterBilling,
+    this.spacesAvailable,
   });
 
   factory PropertyExtras.fromMap(Map<String, dynamic> m) => PropertyExtras(
@@ -71,6 +73,7 @@ class PropertyExtras {
         busFareNgn: (m['bus_fare_ngn'] as num?)?.toInt(),
         electricityBilling: m['electricity_billing'] as String?,
         waterBilling: m['water_billing'] as String?,
+        spacesAvailable: (m['spaces_available'] as num?)?.toInt(),
       );
 
   Map<String, dynamic> toMap() => {
@@ -98,5 +101,6 @@ class PropertyExtras {
         'bus_fare_ngn': busFareNgn,
         'electricity_billing': electricityBilling,
         'water_billing': waterBilling,
+        'spaces_available': spacesAvailable,
       };
 }

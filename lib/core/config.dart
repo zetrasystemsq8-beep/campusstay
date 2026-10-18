@@ -7,6 +7,8 @@ class AppConfig {
   /// Optional. Support and policy links only appear in the app when these are set.
   static const supportEmail = String.fromEnvironment('SUPPORT_EMAIL');
   static const supportWhatsapp = String.fromEnvironment('SUPPORT_WHATSAPP'); // digits with country code, e.g. 2348012345678
+  /// Optional link to the app (for example its Play Store page), added to shared listings.
+  static const appLink = String.fromEnvironment('APP_LINK');
   static const termsUrl = String.fromEnvironment('TERMS_URL');
   static const privacyUrl = String.fromEnvironment('PRIVACY_URL');
 

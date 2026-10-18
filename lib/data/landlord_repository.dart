@@ -26,6 +26,8 @@ abstract class LandlordRepository {
   Future<ExactLocation?> myLocation(String propertyId);
   Future<void> saveLocation(String propertyId, double lat, double lng, String addressLine);
   Future<void> clearLocation(String propertyId);
+  Future<Map<String, ListingStats>> listingStats();
+  Future<void> setSpaces(String id, int spaces, {bool reopen = false});
 }
 
 String _rid() => DateTime.now().microsecondsSinceEpoch.toRadixString(36) + Random().nextInt(1 << 30).toRadixString(36);
@@ -159,6 +161,17 @@ class SampleLandlordRepository implements LandlordRepository {
   Future<void> saveLocation(String propertyId, double lat, double lng, String addressLine) async => _locations[propertyId] = ExactLocation(lat, lng, addressLine);
   @override
   Future<void> clearLocation(String propertyId) async => _locations.remove(propertyId);
+
+  @override
+  Future<Map<String, ListingStats>> listingStats() async => {for (final l in _list) l.id: ListingStats(l.views, 0, 0, 0)};
+
+  @override
+  Future<void> setSpaces(String id, int spaces, {bool reopen = false}) async {
+    final l = _get(id);
+    l.extras = PropertyExtras.fromMap({...l.extras.toMap(), 'spaces_available': spaces});
+    if (spaces == 0 && l.availability == 'available') l.availability = 'rented';
+    if (spaces > 0 && reopen && l.availability == 'rented') l.availability = 'available';
+  }
 }
 
 class SupabaseLandlordRepository implements LandlordRepository {
@@ -324,4 +337,61 @@ class SupabaseLandlordRepository implements LandlordRepository {
   Future<void> clearLocation(String propertyId) async {
     await _c.from('cs_property_locations').delete().eq('property_id', propertyId);
   }
+
+  @override
+  Future<Map<String, ListingStats>> listingStats() async {
+    final rows = await _c.rpc('cs_listing_stats') as List;
+    return {
+      for (final r in rows.cast<Map>())
+        r['property_id'] as String: ListingStats((r['views'] as num).toInt(), (r['saves'] as num).toInt(), (r['enquiries'] as num).toInt(), (r['viewings'] as num).toInt()),
+    };
+  }
+
+  @override
+  Future<void> setSpaces(String id, int spaces, {bool reopen = false}) async {
+    // The database marks the listing rented by itself when spaces reach 0.
+    await _c.from('cs_properties').update({'spaces_available': spaces, if (reopen && spaces > 0) 'availability_status': 'available'}).eq('id', id);
+  }
+}
+
+/// Copies the details of a listing into a new draft. Photos are not copied, because every room looks different.
+/// If the title is taken, "(copy)", "(copy 2)" and so on are tried.
+Future<String> duplicateListing(LandlordRepository r, LandlordListing l) async {
+  final input = ListingInput(
+    title: '',
+    description: l.description,
+    area: l.area,
+    rentPeriod: l.rentPeriod,
+    roomType: l.roomType,
+    universityId: l.universityId,
+    extras: l.extras,
+    rentNgn: l.rentNgn,
+    distanceKm: l.distanceKm,
+    extraFees: l.extraFees,
+  );
+  for (var i = 1; i <= 5; i++) {
+    final title = '${l.title} (copy${i == 1 ? '' : ' $i'})';
+    try {
+      final id = await r.saveDraft(
+          null,
+          ListingInput(
+              title: title,
+              description: input.description,
+              area: input.area,
+              rentPeriod: input.rentPeriod,
+              roomType: input.roomType,
+              universityId: input.universityId,
+              extras: input.extras,
+              rentNgn: input.rentNgn,
+              distanceKm: input.distanceKm,
+              extraFees: input.extraFees));
+      if (l.amenities.isNotEmpty) await r.setAmenities(id, l.amenities);
+      final loc = await r.myLocation(l.id);
+      if (loc != null) await r.saveLocation(id, loc.lat, loc.lng, loc.addressLine);
+      return id;
+    } on AppException catch (e) {
+      if (e.kind != AppErrorKind.duplicate) rethrow; // only a taken title is worth retrying
+    }
+  }
+  throw const AppException(AppErrorKind.duplicate);
 }
