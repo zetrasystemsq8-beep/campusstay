@@ -6,3 +6,7 @@ build/
 *.jks
 key.properties
 local.properties
+*.keystore
+*.p12
+campusstay-keys/
+android/
