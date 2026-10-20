@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/state_views.dart';

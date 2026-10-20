@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/errors.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/widgets/error_views.dart';
 import '../../core/theme/tokens.dart';
@@ -306,7 +307,7 @@ class _ContactSection extends StatefulWidget {
 }
 
 class _ContactSectionState extends State<_ContactSection> {
-  late Future<String> _f = Services.repo.contactStatus(widget.propertyId);
+  late final Future<String> _f = Services.repo.contactStatus(widget.propertyId);
   bool _busy = false;
 
   Future<void> _reach(bool whatsapp) async {

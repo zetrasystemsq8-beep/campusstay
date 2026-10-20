@@ -1,4 +1,3 @@
-import 'amenity_catalog.dart';
 import 'property_extras.dart';
 
 export 'amenity_catalog.dart';

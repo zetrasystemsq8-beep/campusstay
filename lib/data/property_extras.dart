@@ -86,7 +86,7 @@ class PropertyExtras {
         'furnishing': furnishing,
         'gender_preference': genderPreference,
         'max_occupants': maxOccupants,
-        'available_from': availableFrom == null ? null : availableFrom!.toIso8601String().substring(0, 10),
+        'available_from': availableFrom?.toIso8601String().substring(0, 10),
         'lease_months': leaseMonths,
         'allows_instalments': allowsInstalments,
         'caution_fee_ngn': cautionFeeNgn,

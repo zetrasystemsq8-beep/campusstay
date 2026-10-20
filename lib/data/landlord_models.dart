@@ -1,5 +1,4 @@
 import 'models.dart';
-import 'property_extras.dart';
 
 class University {
   final String id, name, shortName, city, state, kind;

@@ -95,7 +95,8 @@ class _ListingsScreenState extends State<ListingsScreen> {
       case 'renew':
         return _run(() => r.renew(l.id), 'Confirmed for 60 more days.');
       case 'reviews':
-        return Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReviewsScreen(propertyId: l.id, title: 'Reviews of ${l.title}')));
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReviewsScreen(propertyId: l.id, title: 'Reviews of ${l.title}')));
+        return;
       case 'copy':
         try {
           final id = await duplicateListing(r, l);

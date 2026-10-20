@@ -89,7 +89,7 @@ class _SavedSearches extends StatefulWidget {
 }
 
 class _SavedSearchesState extends State<_SavedSearches> {
-  late Future<List<(SavedSearch, int)>> _f = _load();
+  late final Future<List<(SavedSearch, int)>> _f = _load();
 
   Future<List<(SavedSearch, int)>> _load() async {
     final list = await Services.repo.savedSearches();
