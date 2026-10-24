@@ -52,11 +52,10 @@ def patch_kts(p):
     old = 'signingConfig = signingConfigs.getByName("debug")'
     if old not in s:
         fail('could not find the debug signingConfig line to replace')
-    s = s.replace(
-        old,
-        'signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")',
-        1,
-    )
+    line = 'signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")'
+    # R8 renames and strips Java/Kotlin methods that newer Flutter plugins look up by name at run time
+    # (for example shared_preferences). That crashed the app at start, so shrinking stays off.
+    s = s.replace(old, line + '\n            isMinifyEnabled = false\n            isShrinkResources = false', 1)
     p.write_text(s)
 
 
@@ -93,7 +92,8 @@ def patch_groovy(p):
     old = 'signingConfig signingConfigs.debug'
     if old not in s:
         fail('could not find the debug signingConfig line to replace')
-    s = s.replace(old, 'signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug', 1)
+    line = 'signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug'
+    s = s.replace(old, line + '\n            minifyEnabled false\n            shrinkResources false', 1)
     if 'import java.io.FileInputStream' not in s:
         s = 'import java.io.FileInputStream\n' + s
     p.write_text(s)

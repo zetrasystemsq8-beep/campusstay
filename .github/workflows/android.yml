@@ -81,14 +81,15 @@ jobs:
             VALUE="${!NAME}"
             if [ -n "$VALUE" ]; then ARGS+=(--dart-define="$NAME=$VALUE"); fi
           done
-          flutter build apk --release "${ARGS[@]}"
+          # Small separate files per phone type, so you download only the one you need.
+          flutter build apk --release --split-per-abi "${ARGS[@]}"
           flutter build appbundle --release "${ARGS[@]}"
       - name: Check how the APK was signed
         env:
           HAS_KEY: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: |
           APKSIGNER="$(ls $ANDROID_HOME/build-tools/*/apksigner | sort -V | tail -1)"
-          OUT="$("$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk)"
+          OUT="$("$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-arm64-v8a-release.apk)"
           echo "$OUT"
           FP="$(echo "$OUT" | grep -m1 'SHA-256' || true)"
           {
@@ -96,6 +97,9 @@ jobs:
             if [ "$HAS_KEY" = "true" ]; then echo "Signed with your release key."; else echo "**Signed with the debug key.** Not accepted by the Play Store."; fi
             echo
             echo "$FP"
+            echo
+            echo "### File sizes"
+            ls -lh build/app/outputs/flutter-apk/*.apk build/app/outputs/bundle/release/*.aab | awk '{print "- " $5 "  " $9}'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$HAS_KEY" = "true" ] && echo "$OUT" | grep -qi "Android Debug"; then
             echo "A release key is set, but the APK is signed with the debug key."
@@ -103,7 +107,13 @@ jobs:
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: campusstay-apk
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+          name: campusstay-apk-arm64
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campusstay-apk-arm32
+          path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campusstay-play-bundle
+          path: build/app/outputs/bundle/release/app-release.aab
