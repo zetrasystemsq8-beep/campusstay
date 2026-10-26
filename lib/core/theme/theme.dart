@@ -40,13 +40,16 @@ ThemeData buildTheme() {
       indicatorColor: CS.blueSoft,
       labelTextStyle: WidgetStateProperty.all(const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
     ),
+    // Dark text on every chip, selected or not. Selected chips get a soft tint and a tick,
+    // so they never depend on white text (which disappeared on unselected chips).
     chipTheme: ChipThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       side: const BorderSide(color: CS.line),
-      selectedColor: CS.blue,
-      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-      secondaryLabelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-      checkmarkColor: Colors.white,
+      backgroundColor: CS.bg,
+      selectedColor: CS.blueSoft,
+      labelStyle: const TextStyle(color: CS.ink, fontWeight: FontWeight.w600),
+      secondaryLabelStyle: const TextStyle(color: CS.ink, fontWeight: FontWeight.w700),
+      checkmarkColor: CS.blue,
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,

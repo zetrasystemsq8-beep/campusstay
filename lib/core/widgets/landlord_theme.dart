@@ -3,7 +3,7 @@ import '../theme/tokens.dart';
 
 ThemeData landlordTheme(ThemeData base) => base.copyWith(
       colorScheme: base.colorScheme.copyWith(primary: CS.green, secondary: CS.teal),
-      chipTheme: base.chipTheme.copyWith(selectedColor: CS.green),
+      chipTheme: base.chipTheme.copyWith(selectedColor: CS.greenSoft, checkmarkColor: CS.green),
       navigationBarTheme: base.navigationBarTheme.copyWith(indicatorColor: CS.greenSoft),
     );
 
